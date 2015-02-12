@@ -1,3 +1,60 @@
+CREATE FUNCTION autogen_simple_inserts() RETURNS void
+    LANGUAGE plpgsql
+    AS $_$
+declare s text;
+declare r record;
+begin
+        for r in select * from in_all_tables_with_params_concantenated loop
+            s = 'create or replace function autogen.insert_' 
+            || r."table_name" || ' '
+            || r."all_sp_params" || ' '
+            || 'returns void language sql as $x$ insert into '
+            || r."table_name" || ' ' 
+            || r."all_params" || ' ' 
+            || r."all_values" || ';'
+            || '$x$;';
+            raise notice '%', s;
+            execute s;
+        end loop;
+end;
+$_$;
+
+
+ALTER FUNCTION public.autogen_simple_inserts() OWNER TO denevell;
+
+--
+-- Name: autogen_simple_inserts_excluding_defaults(); Type: FUNCTION; Schema: public; Owner: denevell
+--
+
+CREATE FUNCTION autogen_simple_inserts_excluding_defaults() RETURNS void
+    LANGUAGE plpgsql
+    AS $_$
+declare s text;
+declare r record;
+begin
+        for r in select * from in_all_tables_with_params_excluding_defaults_concantenated loop
+            s = 'create or replace function autogen.insert_excluding_defaults_' 
+            || r."table_name" || ' '
+            || r."all_sp_params" || ' '
+            || 'returns void language sql as $x$ insert into '
+            || r."table_name" || ' ' 
+            || r."all_params" || ' ' 
+            || r."all_values" || ';'
+            || '$x$;';
+            raise notice '%', s;
+            execute s;
+        end loop;
+end;
+$_$;
+
+
+ALTER FUNCTION public.autogen_simple_inserts_excluding_defaults() OWNER TO denevell;
+
+--
+--
+-- Name: in_all_columns_wth_type; Type: VIEW; Schema: public; Owner: denevell
+--
+
 CREATE VIEW in_all_columns_wth_type AS
  SELECT columns.table_name,
     columns.column_name,
@@ -119,9 +176,10 @@ ALTER TABLE in_all_columns_with_foreign_key_table_and_column_as_array OWNER TO d
 
 CREATE VIEW in_all_tables_with_params AS
  SELECT in_all_columns_with_foreign_key_table_and_column.table_name,
-    (((in_all_columns_with_foreign_key_table_and_column.column_name)::text || ' '::text) || (in_all_columns_with_foreign_key_table_and_column.data_type)::text) AS param,
+    ((('_'::text || (in_all_columns_with_foreign_key_table_and_column.column_name)::text) || ' '::text) || (in_all_columns_with_foreign_key_table_and_column.data_type)::text) AS param,
     ('_'::text || (in_all_columns_with_foreign_key_table_and_column.column_name)::text) AS param_input,
-    in_all_columns_with_foreign_key_table_and_column.column_default
+    in_all_columns_with_foreign_key_table_and_column.column_default,
+    in_all_columns_with_foreign_key_table_and_column.column_name
    FROM in_all_columns_with_foreign_key_table_and_column
   ORDER BY in_all_columns_with_foreign_key_table_and_column.table_name;
 
@@ -134,8 +192,9 @@ ALTER TABLE in_all_tables_with_params OWNER TO denevell;
 
 CREATE VIEW in_all_tables_with_params_concantenated AS
  SELECT in_all_tables_with_params.table_name,
-    (('('::text || array_to_string(array_agg(in_all_tables_with_params.param), ','::text)) || ')'::text) AS all_params,
-    (('values('::text || array_to_string(array_agg(in_all_tables_with_params.param_input), ','::text)) || ')'::text) AS all_values
+    (('('::text || array_to_string(array_agg((in_all_tables_with_params.column_name)::text), ','::text)) || ')'::text) AS all_params,
+    (('values('::text || array_to_string(array_agg(in_all_tables_with_params.param_input), ','::text)) || ')'::text) AS all_values,
+    (('('::text || array_to_string(array_agg(in_all_tables_with_params.param), ','::text)) || ')'::text) AS all_sp_params
    FROM in_all_tables_with_params
   GROUP BY in_all_tables_with_params.table_name;
 
@@ -148,11 +207,13 @@ ALTER TABLE in_all_tables_with_params_concantenated OWNER TO denevell;
 
 CREATE VIEW in_all_tables_with_params_excluding_defaults_concantenated AS
  SELECT in_all_tables_with_params.table_name,
-    (('('::text || array_to_string(array_agg(in_all_tables_with_params.param), ','::text)) || ')'::text) AS all_params,
-    (('values('::text || array_to_string(array_agg(in_all_tables_with_params.param_input), ','::text)) || ')'::text) AS all_values
+    (('('::text || array_to_string(array_agg((in_all_tables_with_params.column_name)::text), ','::text)) || ')'::text) AS all_params,
+    (('values('::text || array_to_string(array_agg(in_all_tables_with_params.param_input), ','::text)) || ')'::text) AS all_values,
+    (('('::text || array_to_string(array_agg(in_all_tables_with_params.param), ','::text)) || ')'::text) AS all_sp_params
    FROM in_all_tables_with_params
   WHERE (in_all_tables_with_params.column_default IS NULL)
   GROUP BY in_all_tables_with_params.table_name;
 
 
 ALTER TABLE in_all_tables_with_params_excluding_defaults_concantenated OWNER TO denevell;
+
