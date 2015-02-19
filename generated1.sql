@@ -540,19 +540,6 @@ CREATE TABLE categories_tags (
 ALTER TABLE categories_tags OWNER TO denevell;
 
 --
--- Name: in_columns_as_declared_var; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_columns_as_declared_var AS
- SELECT t0.table_name,
-    t0.column_name,
-    ((('declare '::text || (t0.column_name)::text) || ' '::text) || (t0.data_type)::text) AS declared_var
-   FROM _columns_public t0;
-
-
-ALTER TABLE in_columns_as_declared_var OWNER TO denevell;
-
---
 -- Name: in_columns_public_non_default; Type: VIEW; Schema: public; Owner: denevell
 --
 
@@ -667,19 +654,6 @@ CREATE VIEW in_join_table_columns AS
 ALTER TABLE in_join_table_columns OWNER TO denevell;
 
 --
--- Name: in_join_table_column_names_agg; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_join_table_column_names_agg AS
- SELECT t0.table_name,
-    array_agg((t0.column_name)::text) AS name_agg
-   FROM in_join_table_columns t0
-  GROUP BY t0.table_name;
-
-
-ALTER TABLE in_join_table_column_names_agg OWNER TO denevell;
-
---
 -- Name: in_join_table_sp_params; Type: VIEW; Schema: public; Owner: denevell
 --
 
@@ -709,62 +683,15 @@ CREATE VIEW in_join_table_sp_params_name_agg AS
 ALTER TABLE in_join_table_sp_params_name_agg OWNER TO denevell;
 
 --
--- Name: in_returning_pk_statement; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_returning_pk_statement AS
- SELECT t0.table_name,
-        CASE
-            WHEN (t1.column_name IS NOT NULL) THEN ('returning '::text || (t1.column_name)::text)
-            ELSE ''::text
-        END AS returning_statement
-   FROM (_tables_public t0
-     LEFT JOIN _columns_primary_key t1 ON (((t0.table_name)::text = (t1.table_name)::text)));
-
-
-ALTER TABLE in_returning_pk_statement OWNER TO denevell;
-
---
--- Name: in_sp_params; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_sp_params AS
- SELECT t0.table_name,
-    ((('_'::text || (t0.column_name)::text) || ' '::text) || (t0.data_type)::text) AS param,
-    ('_'::text || (t0.column_name)::text) AS param_input,
-    (''::character varying)::information_schema.character_data AS column_default,
-    t0.column_name
-   FROM _columns_public t0
-  ORDER BY t0.table_name, t0.column_name;
-
-
-ALTER TABLE in_sp_params OWNER TO denevell;
-
---
--- Name: in_sp_params_excluding_defaults_concatenated; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_sp_params_excluding_defaults_concatenated AS
- SELECT in_sp_params.table_name,
-    (('('::text || array_to_string(array_agg((in_sp_params.column_name)::text), ','::text)) || ')'::text) AS all_params,
-    (('values('::text || array_to_string(array_agg(in_sp_params.param_input), ','::text)) || ')'::text) AS all_values,
-    (('('::text || array_to_string(array_agg(in_sp_params.param), ','::text)) || ')'::text) AS all_sp_params
-   FROM (in_sp_params
-     LEFT JOIN _columns_public t1 ON ((((t1.table_name)::text = (in_sp_params.table_name)::text) AND ((t1.column_name)::text = (in_sp_params.column_name)::text))))
-  WHERE (t1.column_default IS NULL)
-  GROUP BY in_sp_params.table_name;
-
-
-ALTER TABLE in_sp_params_excluding_defaults_concatenated OWNER TO denevell;
-
---
 -- Name: in_simple_insert_into_excluding_defaults; Type: VIEW; Schema: public; Owner: denevell
 --
 
 CREATE VIEW in_simple_insert_into_excluding_defaults AS
  SELECT t0.table_name,
-    ((('insert into '::text || (t0.table_name)::text) || ' '::text) || t0.all_params) AS sql
-   FROM in_sp_params_excluding_defaults_concatenated t0;
+    ((((('insert into '::text || (t0.table_name)::text) || ' '::text) || '('::text) || array_to_string(array_agg((t1.column_name)::text), ','::text)) || ') '::text) AS sql
+   FROM (_tables_public t0
+     JOIN _columns_public t1 ON ((((t1.table_name)::text = (t0.table_name)::text) AND (t1.column_default IS NULL))))
+  GROUP BY t0.table_name;
 
 
 ALTER TABLE in_simple_insert_into_excluding_defaults OWNER TO denevell;
@@ -776,12 +703,15 @@ ALTER TABLE in_simple_insert_into_excluding_defaults OWNER TO denevell;
 CREATE VIEW in_join_table_columns_insert_statement AS
  SELECT t0.table_name,
     t0.column_name,
-    ((((((t3.sql || ' values('::text) || array_to_string(t4.param_name_agg, ','::text)) || ') '::text) || t5.returning_statement) || ' into '::text) || (t0.column_name)::text) AS insert_statement
+    (((((((t3.sql || ' values('::text) || array_to_string(t4.param_name_agg, ','::text)) || ') '::text) || 'returning '::text) || (pk.column_name)::text) || '
+ into '::text) || (t0.column_name)::text) AS insert_statement
    FROM ((((in_join_table_columns t0
      JOIN in_columns_referenced_tables_only t2 ON ((((t2.column_name)::text = (t0.column_name)::text) AND ((t2.table_name)::text = (t0.table_name)::text))))
      JOIN in_simple_insert_into_excluding_defaults t3 ON (((t3.table_name)::text = (t2."references")::text)))
      JOIN in_join_table_sp_params_name_agg t4 ON ((((t0.table_name)::text = (t4.table_name)::text) AND ((t4.insert_column_name)::text = (t0.column_name)::text))))
-     JOIN in_returning_pk_statement t5 ON (((t2."references")::text = (t5.table_name)::text)))
+     JOIN ( SELECT _columns_primary_key.table_name,
+            _columns_primary_key.column_name
+           FROM _columns_primary_key) pk ON (((pk.table_name)::text = (t2."references")::text)))
   ORDER BY t0.table_name;
 
 
@@ -846,20 +776,6 @@ CREATE VIEW in_join_table_columns_insert_statements_with_unique_catche_agg AS
 ALTER TABLE in_join_table_columns_insert_statements_with_unique_catche_agg OWNER TO denevell;
 
 --
--- Name: in_join_table_declared_vars; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_join_table_declared_vars AS
- SELECT t0.table_name,
-    t1.declared_var
-   FROM (in_join_table_columns t0
-     JOIN in_columns_as_declared_var t1 ON ((((t1.column_name)::text = (t0.column_name)::text) AND ((t1.table_name)::text = (t0.table_name)::text))))
-  ORDER BY t0.table_name;
-
-
-ALTER TABLE in_join_table_declared_vars OWNER TO denevell;
-
---
 -- Name: in_join_table_final_inserts; Type: VIEW; Schema: public; Owner: denevell
 --
 
@@ -868,7 +784,10 @@ CREATE VIEW in_join_table_final_inserts AS
     (((t6.sql || ' values('::text) || array_to_string(t7.name_agg, ','::text)) || ')'::text) AS insert_statement
    FROM ((in_join_tables t0
      JOIN in_simple_insert_into_excluding_defaults t6 ON (((t6.table_name)::text = (t0.table_name)::text)))
-     JOIN in_join_table_column_names_agg t7 ON (((t7.table_name)::text = (t0.table_name)::text)))
+     JOIN ( SELECT t0_1.table_name,
+            array_agg((t0_1.column_name)::text) AS name_agg
+           FROM in_join_table_columns t0_1
+          GROUP BY t0_1.table_name) t7 ON (((t7.table_name)::text = (t0.table_name)::text)))
   ORDER BY t0.table_name;
 
 
@@ -882,7 +801,10 @@ CREATE VIEW in_join_table_sp_declared_vars AS
  SELECT t0.table_name,
     (array_to_string(array_agg(t1.declared_var), '; '::text) || ';'::text) AS declare_var_statements
    FROM (in_join_table_columns t0
-     JOIN in_columns_as_declared_var t1 ON ((((t0.table_name)::text = (t1.table_name)::text) AND ((t0.column_name)::text = (t1.column_name)::text))))
+     JOIN ( SELECT t0_1.table_name,
+            t0_1.column_name,
+            ((('declare '::text || (t0_1.column_name)::text) || ' '::text) || (t0_1.data_type)::text) AS declared_var
+           FROM _columns_public t0_1) t1 ON ((((t0.table_name)::text = (t1.table_name)::text) AND ((t0.column_name)::text = (t1.column_name)::text))))
   GROUP BY t0.table_name, t0.data_type
   ORDER BY t0.table_name;
 
