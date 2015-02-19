@@ -1,41 +1,4 @@
---
--- PostgreSQL database dump
---
-
-SET statement_timeout = 0;
-SET lock_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = on;
-SET check_function_bodies = false;
-SET client_min_messages = warning;
-
---
--- Name: autogen; Type: SCHEMA; Schema: -; Owner: denevell
---
-
-CREATE SCHEMA autogen;
-
-
-ALTER SCHEMA autogen OWNER TO denevell;
-
---
--- Name: plpgsql; Type: EXTENSION; Schema: -; Owner: 
---
-
-CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
-
-
---
--- Name: EXTENSION plpgsql; Type: COMMENT; Schema: -; Owner: 
---
-
-COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
-
-
-SET search_path = autogen, pg_catalog;
-
---
--- Name: insert_into_join_table_categories_tags(text, text); Type: FUNCTION; Schema: autogen; Owner: denevell
+-- Name: autogen_join_table_inserts(); Type: FUNCTION; Schema: public; Owner: denevell
 --
 
 CREATE FUNCTION autogen_join_table_inserts() RETURNS void
@@ -53,6 +16,26 @@ $$;
 
 
 ALTER FUNCTION public.autogen_join_table_inserts() OWNER TO denevell;
+
+--
+-- Name: autogen_join_table_inserts_with_unique_catch(); Type: FUNCTION; Schema: public; Owner: denevell
+--
+
+CREATE FUNCTION autogen_join_table_inserts_with_unique_catch() RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+declare s text;
+declare r record;
+begin
+                for r in select * from in_join_table_sp_insert_functions_with_unique_catch loop
+                                    raise notice '%', r."sql";
+                                            execute r."sql";
+                                                end loop;
+end;
+$$;
+
+
+ALTER FUNCTION public.autogen_join_table_inserts_with_unique_catch() OWNER TO denevell;
 
 --
 -- Name: autogen_simple_inserts(); Type: FUNCTION; Schema: public; Owner: denevell
@@ -113,13 +96,15 @@ $$;
 
 ALTER FUNCTION public.create_select_into_on_unique_column(table_name_with_unique text, value_into text, value_match text) OWNER TO denevell;
 
+--
 CREATE VIEW in_columns AS
  SELECT columns.table_name,
     columns.column_name,
     columns.data_type,
     columns.column_default,
     columns.is_nullable
-   FROM information_schema.columns;
+   FROM information_schema.columns
+  ORDER BY columns.column_name;
 
 
 ALTER TABLE in_columns OWNER TO denevell;
@@ -147,7 +132,8 @@ CREATE VIEW in_columns_public AS
     t1.column_default,
     t1.is_nullable
    FROM (in_tables_public t0
-     LEFT JOIN in_columns t1 ON (((t0.table_name)::text = (t1.table_name)::text)));
+     LEFT JOIN in_columns t1 ON (((t0.table_name)::text = (t1.table_name)::text)))
+  ORDER BY t0.table_name, t1.column_name;
 
 
 ALTER TABLE in_columns_public OWNER TO denevell;
@@ -453,6 +439,38 @@ CREATE VIEW in_join_table_columns_insert_statement AS
 ALTER TABLE in_join_table_columns_insert_statement OWNER TO denevell;
 
 --
+-- Name: in_join_table_columns_select_into_via_unique_statement; Type: VIEW; Schema: public; Owner: denevell
+--
+
+CREATE VIEW in_join_table_columns_select_into_via_unique_statement AS
+ SELECT t0.table_name,
+    t0.column_name,
+    t0.insert_statement,
+    create_select_into_on_unique_column((t2.table_name)::text, (t0.column_name)::text, (((t0.column_name)::text || '_'::text) || (t2.column_name)::text)) AS select_into_via_unique
+   FROM ((in_join_table_columns_insert_statement t0
+     LEFT JOIN in_columns_referenced_tables t1 ON ((((t1.table_name)::text = (t0.table_name)::text) AND ((t1.column_name)::text = (t0.column_name)::text))))
+     LEFT JOIN in_columns_unique t2 ON (((t2.table_name)::text = (t1."references")::text)));
+
+
+ALTER TABLE in_join_table_columns_select_into_via_unique_statement OWNER TO denevell;
+
+--
+-- Name: in_join_table_columns_insert_statement_with_unique_catch; Type: VIEW; Schema: public; Owner: denevell
+--
+
+CREATE VIEW in_join_table_columns_insert_statement_with_unique_catch AS
+ SELECT t0.table_name,
+    t0.column_name,
+        CASE
+            WHEN (t0.select_into_via_unique IS NULL) THEN (t0.insert_statement || ';'::text)
+            ELSE (((('begin '::text || t0.insert_statement) || '; exception when unique_violation then '::text) || t0.select_into_via_unique) || '; end;'::text)
+        END AS sql
+   FROM in_join_table_columns_select_into_via_unique_statement t0;
+
+
+ALTER TABLE in_join_table_columns_insert_statement_with_unique_catch OWNER TO denevell;
+
+--
 -- Name: in_join_table_columns_insert_statements_agg; Type: VIEW; Schema: public; Owner: denevell
 --
 
@@ -464,6 +482,19 @@ CREATE VIEW in_join_table_columns_insert_statements_agg AS
 
 
 ALTER TABLE in_join_table_columns_insert_statements_agg OWNER TO denevell;
+
+--
+-- Name: in_join_table_columns_insert_statements_with_unique_catche_agg; Type: VIEW; Schema: public; Owner: denevell
+--
+
+CREATE VIEW in_join_table_columns_insert_statements_with_unique_catche_agg AS
+ SELECT t0.table_name,
+    array_to_string(array_agg(t0.sql), ' '::text) AS insert_statement
+   FROM in_join_table_columns_insert_statement_with_unique_catch t0
+  GROUP BY t0.table_name;
+
+
+ALTER TABLE in_join_table_columns_insert_statements_with_unique_catche_agg OWNER TO denevell;
 
 --
 -- Name: in_join_table_declared_vars; Type: VIEW; Schema: public; Owner: denevell
@@ -550,6 +581,22 @@ CREATE VIEW in_join_table_sp_insert_functions AS
 
 
 ALTER TABLE in_join_table_sp_insert_functions OWNER TO denevell;
+
+--
+-- Name: in_join_table_sp_insert_functions_with_unique_catch; Type: VIEW; Schema: public; Owner: denevell
+--
+
+CREATE VIEW in_join_table_sp_insert_functions_with_unique_catch AS
+ SELECT t1.table_name,
+    (((((((((('create or replace function autogen.insert_into_join_table_with_unique_catch_'::text || (t0.table_name)::text) || ' ('::text) || t1.param_name_conat_agg) || ') returns void language plpgsql as $function$ '::text) || t2.declare_var_statements) || ' begin '::text) || t3.insert_statement) || ' '::text) || t4.insert_statement) || '; end; $function$;'::text) AS sql
+   FROM ((((in_join_tables t0
+     JOIN in_join_table_sp_params_concat_agg t1 ON (((t1.table_name)::text = (t0.table_name)::text)))
+     JOIN in_join_table_sp_declared_vars t2 ON (((t2.table_name)::text = (t0.table_name)::text)))
+     JOIN in_join_table_columns_insert_statements_with_unique_catche_agg t3 ON (((t3.table_name)::text = (t0.table_name)::text)))
+     JOIN in_join_table_final_inserts t4 ON (((t4.table_name)::text = (t0.table_name)::text)));
+
+
+ALTER TABLE in_join_table_sp_insert_functions_with_unique_catch OWNER TO denevell;
 
 --
 -- Name: in_join_tables_sp_params_concatenated; Type: VIEW; Schema: public; Owner: denevell
@@ -674,275 +721,5 @@ ALTER TABLE in_sp_simple_inserts_excluding_defaults OWNER TO denevell;
 
 --
 -- Name: koans_id_seq; Type: SEQUENCE; Schema: public; Owner: denevell
---
-
-CREATE SEQUENCE koans_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER TABLE koans_id_seq OWNER TO denevell;
-
---
--- Name: koans; Type: TABLE; Schema: public; Owner: denevell; Tablespace: 
---
-
-CREATE TABLE koans (
-    id integer DEFAULT nextval('koans_id_seq'::regclass) NOT NULL,
-    message text
-);
-
-
-ALTER TABLE koans OWNER TO denevell;
-
---
--- Name: koans_tags; Type: TABLE; Schema: public; Owner: denevell; Tablespace: 
---
-
-CREATE TABLE koans_tags (
-    koan_id integer,
-    tag_id integer
-);
-
-
-ALTER TABLE koans_tags OWNER TO denevell;
-
---
--- Name: schema_version; Type: TABLE; Schema: public; Owner: denevell; Tablespace: 
---
-
-CREATE TABLE schema_version (
-    version_rank integer NOT NULL,
-    installed_rank integer NOT NULL,
-    version character varying(50) NOT NULL,
-    description character varying(200) NOT NULL,
-    type character varying(20) NOT NULL,
-    script character varying(1000) NOT NULL,
-    checksum integer,
-    installed_by character varying(100) NOT NULL,
-    installed_on timestamp without time zone DEFAULT now() NOT NULL,
-    execution_time integer NOT NULL,
-    success boolean NOT NULL
-);
-
-
-ALTER TABLE schema_version OWNER TO denevell;
-
---
--- Name: str; Type: TABLE; Schema: public; Owner: denevell; Tablespace: 
---
-
-CREATE TABLE str (
-    "?column?" text
-);
-
-
-ALTER TABLE str OWNER TO denevell;
-
---
--- Name: tags_id_seq; Type: SEQUENCE; Schema: public; Owner: denevell
---
-
-CREATE SEQUENCE tags_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER TABLE tags_id_seq OWNER TO denevell;
-
---
--- Name: tags; Type: TABLE; Schema: public; Owner: denevell; Tablespace: 
---
-
-CREATE TABLE tags (
-    id integer DEFAULT nextval('tags_id_seq'::regclass) NOT NULL,
-    tag text
-);
-
-
-ALTER TABLE tags OWNER TO denevell;
-
---
--- Name: tmp; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW tmp AS
- SELECT t0.table_name,
-    t0.column_name,
-    t0.insert_statement,
-    create_select_into_on_unique_column((t1.table_name)::text, (t0.column_name)::text, (((t0.column_name)::text || '_'::text) || (t1.column_name)::text)) AS create_select_into_on_unique_column
-   FROM ((in_join_table_columns_insert_statement t0
-     LEFT JOIN in_columns_referenced_tables t2 ON ((((t2.table_name)::text = (t0.table_name)::text) AND ((t2.column_name)::text = (t0.column_name)::text))))
-     LEFT JOIN in_columns_unique t1 ON (((t1.table_name)::text = (t2."references")::text)));
-
-
-ALTER TABLE tmp OWNER TO denevell;
-
---
--- Name: tmp_multicolumn_id_seq; Type: SEQUENCE; Schema: public; Owner: denevell
---
-
-CREATE SEQUENCE tmp_multicolumn_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER TABLE tmp_multicolumn_id_seq OWNER TO denevell;
-
---
--- Name: tmp_multicolumn; Type: TABLE; Schema: public; Owner: denevell; Tablespace: 
---
-
-CREATE TABLE tmp_multicolumn (
-    id integer DEFAULT nextval('tmp_multicolumn_id_seq'::regclass) NOT NULL,
-    one text,
-    two text
-);
-
-
-ALTER TABLE tmp_multicolumn OWNER TO denevell;
-
---
--- Name: tmp_multicolumn_tags; Type: TABLE; Schema: public; Owner: denevell; Tablespace: 
---
-
-CREATE TABLE tmp_multicolumn_tags (
-    multi_id integer,
-    koan_id integer
-);
-
-
-ALTER TABLE tmp_multicolumn_tags OWNER TO denevell;
-
---
--- Name: koans_pkey; Type: CONSTRAINT; Schema: public; Owner: denevell; Tablespace: 
---
-
-ALTER TABLE ONLY koans
-    ADD CONSTRAINT koans_pkey PRIMARY KEY (id);
-
-
---
--- Name: schema_version_pk; Type: CONSTRAINT; Schema: public; Owner: denevell; Tablespace: 
---
-
-ALTER TABLE ONLY schema_version
-    ADD CONSTRAINT schema_version_pk PRIMARY KEY (version);
-
-
---
--- Name: tags_pkey; Type: CONSTRAINT; Schema: public; Owner: denevell; Tablespace: 
---
-
-ALTER TABLE ONLY tags
-    ADD CONSTRAINT tags_pkey PRIMARY KEY (id);
-
-
---
--- Name: tmp_multicolumn_pkey; Type: CONSTRAINT; Schema: public; Owner: denevell; Tablespace: 
---
-
-ALTER TABLE ONLY tmp_multicolumn
-    ADD CONSTRAINT tmp_multicolumn_pkey PRIMARY KEY (id);
-
-
---
--- Name: unique_tag; Type: CONSTRAINT; Schema: public; Owner: denevell; Tablespace: 
---
-
-ALTER TABLE ONLY tags
-    ADD CONSTRAINT unique_tag UNIQUE (tag);
-
-
---
--- Name: schema_version_ir_idx; Type: INDEX; Schema: public; Owner: denevell; Tablespace: 
---
-
-CREATE INDEX schema_version_ir_idx ON schema_version USING btree (installed_rank);
-
-
---
--- Name: schema_version_s_idx; Type: INDEX; Schema: public; Owner: denevell; Tablespace: 
---
-
-CREATE INDEX schema_version_s_idx ON schema_version USING btree (success);
-
-
---
--- Name: schema_version_vr_idx; Type: INDEX; Schema: public; Owner: denevell; Tablespace: 
---
-
-CREATE INDEX schema_version_vr_idx ON schema_version USING btree (version_rank);
-
-
---
--- Name: categories_tags_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: denevell
---
-
-ALTER TABLE ONLY categories_tags
-    ADD CONSTRAINT categories_tags_category_id_fkey FOREIGN KEY (category_id) REFERENCES tags(id);
-
-
---
--- Name: categories_tags_tag_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: denevell
---
-
-ALTER TABLE ONLY categories_tags
-    ADD CONSTRAINT categories_tags_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES tags(id);
-
-
---
--- Name: koans_tags_koan_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: denevell
---
-
-ALTER TABLE ONLY koans_tags
-    ADD CONSTRAINT koans_tags_koan_id_fkey FOREIGN KEY (koan_id) REFERENCES koans(id) ON DELETE CASCADE;
-
-
---
--- Name: koans_tags_tag_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: denevell
---
-
-ALTER TABLE ONLY koans_tags
-    ADD CONSTRAINT koans_tags_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES tags(id);
-
-
---
--- Name: tmp_multicolumn_tags_koan_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: denevell
---
-
-ALTER TABLE ONLY tmp_multicolumn_tags
-    ADD CONSTRAINT tmp_multicolumn_tags_koan_id_fkey FOREIGN KEY (koan_id) REFERENCES koans(id);
-
-
---
--- Name: tmp_multicolumn_tags_multi_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: denevell
---
-
-ALTER TABLE ONLY tmp_multicolumn_tags
-    ADD CONSTRAINT tmp_multicolumn_tags_multi_id_fkey FOREIGN KEY (multi_id) REFERENCES tmp_multicolumn(id);
-
-
---
--- Name: public; Type: ACL; Schema: -; Owner: postgres
---
-
-REVOKE ALL ON SCHEMA public FROM PUBLIC;
-REVOKE ALL ON SCHEMA public FROM postgres;
-GRANT ALL ON SCHEMA public TO postgres;
-GRANT ALL ON SCHEMA public TO PUBLIC;
-
-
---
--- PostgreSQL database dump complete
 --
 
