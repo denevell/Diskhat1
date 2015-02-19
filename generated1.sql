@@ -159,8 +159,8 @@ CREATE FUNCTION create_select_into_on_unique_column(table_name_with_unique text,
     declare str text;
     begin
         select 'select ' || t0.column_name || ' into ' || value_into || ' from ' || t0.table_name || ' where ' || t1.column_name || ' = ' || value_match into str 
-        from in_primary_key_constraints t0 
-        join in_columns_unique t1 on t1.table_name = t0.table_name and t1.table_name = table_name_with_unique;
+        from _columns_primary_key t0 
+        join _columns_unique t1 on t1.table_name = t0.table_name and t1.table_name = table_name_with_unique;
         return str;
     end;
 $$;
@@ -669,20 +669,6 @@ CREATE VIEW in_join_table_sp_params AS
 ALTER TABLE in_join_table_sp_params OWNER TO denevell;
 
 --
--- Name: in_join_table_sp_params_name_agg; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_join_table_sp_params_name_agg AS
- SELECT t0.table_name,
-    t0.insert_column_name,
-    array_agg(t0.sp_param_name) AS param_name_agg
-   FROM in_join_table_sp_params t0
-  GROUP BY t0.table_name, t0.insert_column_name;
-
-
-ALTER TABLE in_join_table_sp_params_name_agg OWNER TO denevell;
-
---
 -- Name: in_simple_insert_into_excluding_defaults; Type: VIEW; Schema: public; Owner: denevell
 --
 
@@ -708,7 +694,11 @@ CREATE VIEW in_join_table_columns_insert_statement AS
    FROM ((((in_join_table_columns t0
      JOIN in_columns_referenced_tables_only t2 ON ((((t2.column_name)::text = (t0.column_name)::text) AND ((t2.table_name)::text = (t0.table_name)::text))))
      JOIN in_simple_insert_into_excluding_defaults t3 ON (((t3.table_name)::text = (t2."references")::text)))
-     JOIN in_join_table_sp_params_name_agg t4 ON ((((t0.table_name)::text = (t4.table_name)::text) AND ((t4.insert_column_name)::text = (t0.column_name)::text))))
+     JOIN ( SELECT t0_1.table_name,
+            t0_1.insert_column_name,
+            array_agg(t0_1.sp_param_name) AS param_name_agg
+           FROM in_join_table_sp_params t0_1
+          GROUP BY t0_1.table_name, t0_1.insert_column_name) t4 ON ((((t0.table_name)::text = (t4.table_name)::text) AND ((t4.insert_column_name)::text = (t0.column_name)::text))))
      JOIN ( SELECT _columns_primary_key.table_name,
             _columns_primary_key.column_name
            FROM _columns_primary_key) pk ON (((pk.table_name)::text = (t2."references")::text)))
@@ -825,19 +815,6 @@ CREATE VIEW in_join_table_sp_params_concat AS
 ALTER TABLE in_join_table_sp_params_concat OWNER TO denevell;
 
 --
--- Name: in_join_table_sp_params_concat_agg; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_join_table_sp_params_concat_agg AS
- SELECT t0.table_name,
-    array_to_string(array_agg(t0.param_name_concat), ','::text) AS param_name_conat_agg
-   FROM in_join_table_sp_params_concat t0
-  GROUP BY t0.table_name;
-
-
-ALTER TABLE in_join_table_sp_params_concat_agg OWNER TO denevell;
-
---
 -- Name: in_join_table_sp_insert_functions; Type: VIEW; Schema: public; Owner: denevell
 --
 
@@ -845,7 +822,10 @@ CREATE VIEW in_join_table_sp_insert_functions AS
  SELECT t1.table_name,
     (((((((((('create or replace function autogen.insert_into_join_table_'::text || (t0.table_name)::text) || ' ('::text) || t1.param_name_conat_agg) || ') returns void language plpgsql as $function$ '::text) || t2.declare_var_statements) || ' begin '::text) || t3.insert_statement) || ' '::text) || t4.insert_statement) || '; end; $function$;'::text) AS sql
    FROM ((((in_join_tables t0
-     JOIN in_join_table_sp_params_concat_agg t1 ON (((t1.table_name)::text = (t0.table_name)::text)))
+     JOIN ( SELECT t0_1.table_name,
+            array_to_string(array_agg(t0_1.param_name_concat), ','::text) AS param_name_conat_agg
+           FROM in_join_table_sp_params_concat t0_1
+          GROUP BY t0_1.table_name) t1 ON (((t1.table_name)::text = (t0.table_name)::text)))
      JOIN in_join_table_sp_declared_vars t2 ON (((t2.table_name)::text = (t0.table_name)::text)))
      JOIN in_join_table_columns_insert_statements_agg t3 ON (((t3.table_name)::text = (t0.table_name)::text)))
      JOIN in_join_table_final_inserts t4 ON (((t4.table_name)::text = (t0.table_name)::text)));
@@ -861,42 +841,16 @@ CREATE VIEW in_join_table_sp_insert_functions_with_unique_catch AS
  SELECT t1.table_name,
     (((((((((('create or replace function autogen.insert_into_join_table_with_unique_catch_'::text || (t0.table_name)::text) || ' ('::text) || t1.param_name_conat_agg) || ') returns void language plpgsql as $function$ '::text) || t2.declare_var_statements) || ' begin '::text) || t3.insert_statement) || ' '::text) || t4.insert_statement) || '; end; $function$;'::text) AS sql
    FROM ((((in_join_tables t0
-     JOIN in_join_table_sp_params_concat_agg t1 ON (((t1.table_name)::text = (t0.table_name)::text)))
+     JOIN ( SELECT t0_1.table_name,
+            array_to_string(array_agg(t0_1.param_name_concat), ','::text) AS param_name_conat_agg
+           FROM in_join_table_sp_params_concat t0_1
+          GROUP BY t0_1.table_name) t1 ON (((t1.table_name)::text = (t0.table_name)::text)))
      JOIN in_join_table_sp_declared_vars t2 ON (((t2.table_name)::text = (t0.table_name)::text)))
      JOIN in_join_table_columns_insert_statements_with_unique_catche_agg t3 ON (((t3.table_name)::text = (t0.table_name)::text)))
      JOIN in_join_table_final_inserts t4 ON (((t4.table_name)::text = (t0.table_name)::text)));
 
 
 ALTER TABLE in_join_table_sp_insert_functions_with_unique_catch OWNER TO denevell;
-
---
--- Name: in_join_tables_sp_params_concatenated; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_join_tables_sp_params_concatenated AS
- SELECT t0.table_name,
-    t0.insert_column_name,
-    ((t0.sp_param_name || ' '::text) || (t0.sp_param_type)::text) AS sp_param
-   FROM in_join_table_sp_params t0
-  ORDER BY t0.table_name;
-
-
-ALTER TABLE in_join_tables_sp_params_concatenated OWNER TO denevell;
-
---
--- Name: in_join_tables_sp_params_concatenated_agg; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_join_tables_sp_params_concatenated_agg AS
- SELECT t0.table_name,
-    t0.insert_column_name,
-    array_agg(t0.sp_param) AS sp_param_agg
-   FROM in_join_tables_sp_params_concatenated t0
-  GROUP BY t0.table_name, t0.insert_column_name
-  ORDER BY t0.table_name;
-
-
-ALTER TABLE in_join_tables_sp_params_concatenated_agg OWNER TO denevell;
 
 --
 -- Name: koans_id_seq; Type: SEQUENCE; Schema: public; Owner: denevell
