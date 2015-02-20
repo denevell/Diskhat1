@@ -211,6 +211,29 @@ $$;
 ALTER FUNCTION public.create_declared(name text, type text) OWNER TO denevell;
 
 --
+-- Name: create_declareds(text[], text[]); Type: FUNCTION; Schema: public; Owner: denevell
+--
+
+CREATE FUNCTION create_declareds(names text[], types text[]) RETURNS text
+    LANGUAGE plpgsql
+    AS $$
+    declare name text;
+    declare type text;    
+    declare str text;        
+    begin
+	str = '';
+	
+	for i in 1..array_length(names, 1) loop begin
+		str = str || 'declare ' || names[i] || ' ' || types[i] || '; ';
+	end; end loop;
+	return str;
+    end;
+$$;
+
+
+ALTER FUNCTION public.create_declareds(names text[], types text[]) OWNER TO denevell;
+
+--
 -- Name: create_insert(text, text, text); Type: FUNCTION; Schema: public; Owner: denevell
 --
 
@@ -782,7 +805,7 @@ ALTER TABLE in_join_table_columns_insert_statement_with_unique_catch OWNER TO de
 
 CREATE VIEW in_join_table_sp_insert_functions AS
  SELECT sp_params.table_name,
-    create_sp(('autogen.insert_into_join_table_'::text || (join_tables.table_name)::text), sp_params.param_name_conat_agg, 'void'::text, 'plpgsql'::text, declared_vars.declare_var_statements, (((insert_statements.insert_statement || ' '::text) || final_insert_statement.insert_statement) || ';'::text)) AS sql
+    create_sp(('autogen.insert_into_join_table_'::text || (join_tables.table_name)::text), sp_params.param_name_conat_agg, 'void'::text, 'plpgsql'::text, declared_vars.declared_vars, (((insert_statements.insert_statement || ' '::text) || final_insert_statement.insert_statement) || ';'::text)) AS sql
    FROM ((((_tables_join join_tables
      JOIN ( SELECT sp_params_with_type.table_name,
             array_to_string(array_agg(sp_params_with_type.param_name_concat), ','::text) AS param_name_conat_agg
@@ -791,28 +814,19 @@ CREATE VIEW in_join_table_sp_insert_functions AS
                    FROM _sp_join_table_full_insert_params t0_2
                   ORDER BY t0_2.table_name) sp_params_with_type
           GROUP BY sp_params_with_type.table_name) sp_params ON (((sp_params.table_name)::text = (join_tables.table_name)::text)))
-     JOIN ( SELECT t0_1.table_name,
-            (array_to_string(array_agg(t1_1.declared_var), '; '::text) || ';'::text) AS declare_var_statements
-           FROM (_columns_join_tables t0_1
-             JOIN ( SELECT t0_1_1.table_name,
-                    t0_1_1.column_name,
-                    create_declared((t0_1_1.column_name)::text, (t0_1_1.data_type)::text) AS declared_var
-                   FROM _columns_public t0_1_1) t1_1 ON ((((t0_1.table_name)::text = (t1_1.table_name)::text) AND ((t0_1.column_name)::text = (t1_1.column_name)::text))))
-          GROUP BY t0_1.table_name, t0_1.data_type
-          ORDER BY t0_1.table_name) declared_vars ON (((declared_vars.table_name)::text = (join_tables.table_name)::text)))
+     JOIN ( SELECT columns_public.table_name,
+            create_declareds(array_agg((columns_public.column_name)::text), array_agg((columns_public.data_type)::text)) AS declared_vars
+           FROM _columns_public columns_public
+          GROUP BY columns_public.table_name) declared_vars ON (((declared_vars.table_name)::text = (join_tables.table_name)::text)))
      JOIN ( SELECT t0_1.table_name,
             (array_to_string(array_agg(t0_1.insert_statement), '; '::text) || ';'::text) AS insert_statement
            FROM in_join_table_columns_insert_statement t0_1
           GROUP BY t0_1.table_name) insert_statements ON (((insert_statements.table_name)::text = (join_tables.table_name)::text)))
-     JOIN ( SELECT join_tables_1.table_name,
-            create_insert((join_tables_1.table_name)::text, array_to_string(join_columns.name_agg, ','::text), array_to_string(join_columns.name_agg, ','::text)) AS insert_statement
-           FROM ((_tables_join join_tables_1
-             JOIN _columns_not_default join_table_columns ON (((join_table_columns.table_name)::text = (join_tables_1.table_name)::text)))
-             JOIN ( SELECT t0_1_1.table_name,
-                    array_agg((t0_1_1.column_name)::text) AS name_agg
-                   FROM _columns_join_tables t0_1_1
-                  GROUP BY t0_1_1.table_name) join_columns ON (((join_columns.table_name)::text = (join_tables_1.table_name)::text)))
-          ORDER BY join_tables_1.table_name) final_insert_statement ON (((final_insert_statement.table_name)::text = (join_tables.table_name)::text)));
+     JOIN ( SELECT join_columns.table_name,
+            create_insert((join_columns.table_name)::text, array_to_string(array_agg((join_columns.column_name)::text), ','::text), array_to_string(array_agg((join_columns.column_name)::text), ','::text)) AS insert_statement
+           FROM _columns_join_tables join_columns
+          GROUP BY join_columns.table_name
+          ORDER BY join_columns.table_name) final_insert_statement ON (((final_insert_statement.table_name)::text = (join_tables.table_name)::text)));
 
 
 ALTER TABLE in_join_table_sp_insert_functions OWNER TO denevell;
