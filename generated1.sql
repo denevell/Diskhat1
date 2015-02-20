@@ -35,15 +35,56 @@ COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
 SET search_path = autogen, pg_catalog;
 
 --
+-- Name: insert_into_join_table_categories_tags(text, text); Type: FUNCTION; Schema: autogen; Owner: denevell
+--
+
+CREATE FUNCTION insert_into_join_table_categories_tags(tag_id_tag text, category_id_tag text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$ declare category_id integer; declare tag_id integer; begin insert into tags (tag)  values(category_id_tag) returning id
+ into category_id; insert into tags (tag)  values(tag_id_tag) returning id
+ into tag_id; insert into categories_tags (category_id,tag_id)  values(category_id,tag_id); end; $$;
+
+
+ALTER FUNCTION autogen.insert_into_join_table_categories_tags(tag_id_tag text, category_id_tag text) OWNER TO denevell;
+
+--
+-- Name: insert_into_join_table_koans_tags(text, text); Type: FUNCTION; Schema: autogen; Owner: denevell
+--
+
+CREATE FUNCTION insert_into_join_table_koans_tags(koan_id_message text, tag_id_tag text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$ declare koan_id integer; declare tag_id integer; begin insert into tags (tag)  values(tag_id_tag) returning id
+ into tag_id; insert into koans (message)  values(koan_id_message) returning id
+ into koan_id; insert into koans_tags (koan_id,tag_id)  values(koan_id,tag_id); end; $$;
+
+
+ALTER FUNCTION autogen.insert_into_join_table_koans_tags(koan_id_message text, tag_id_tag text) OWNER TO denevell;
+
+--
+-- Name: insert_into_join_table_tmp_multicolumn_tags(text, text, text); Type: FUNCTION; Schema: autogen; Owner: denevell
+--
+
+CREATE FUNCTION insert_into_join_table_tmp_multicolumn_tags(koan_id_message text, multi_id_one text, multi_id_two text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$ declare koan_id integer; declare multi_id integer; begin insert into tmp_multicolumn (one,two)  values(multi_id_one,multi_id_two) returning id
+ into multi_id; insert into koans (message)  values(koan_id_message) returning id
+ into koan_id; insert into tmp_multicolumn_tags (koan_id,multi_id)  values(koan_id,multi_id); end; $$;
+
+
+ALTER FUNCTION autogen.insert_into_join_table_tmp_multicolumn_tags(koan_id_message text, multi_id_one text, multi_id_two text) OWNER TO denevell;
+
+--
 -- Name: insert_into_join_table_with_unique_catch_categories_tags(text, text); Type: FUNCTION; Schema: autogen; Owner: denevell
 --
 
-CREATE FUNCTION insert_into_join_table_with_unique_catch_categories_tags(category_id_tag text, tag_id_tag text) RETURNS void
+CREATE FUNCTION insert_into_join_table_with_unique_catch_categories_tags(tag_id_tag text, category_id_tag text) RETURNS void
     LANGUAGE plpgsql
-    AS $$ declare category_id integer; declare tag_id integer; begin begin insert into tags (tag) values(category_id_tag) returning id into category_id; exception when unique_violation then select id into category_id from tags where tag = category_id_tag; end; begin insert into tags (tag) values(tag_id_tag) returning id into tag_id; exception when unique_violation then select id into tag_id from tags where tag = tag_id_tag; end; insert into categories_tags (category_id,tag_id) values(category_id,tag_id); end; $$;
+    AS $$ declare category_id integer; declare tag_id integer; begin begin insert into tags (tag)  values(category_id_tag) returning id
+ into category_id; exception when unique_violation then select id into category_id from tags where tag = category_id_tag; end; begin insert into tags (tag)  values(tag_id_tag) returning id
+ into tag_id; exception when unique_violation then select id into tag_id from tags where tag = tag_id_tag; end; insert into categories_tags (category_id,tag_id) values(category_id,tag_id); end; $$;
 
 
-ALTER FUNCTION autogen.insert_into_join_table_with_unique_catch_categories_tags(category_id_tag text, tag_id_tag text) OWNER TO denevell;
+ALTER FUNCTION autogen.insert_into_join_table_with_unique_catch_categories_tags(tag_id_tag text, category_id_tag text) OWNER TO denevell;
 
 --
 -- Name: insert_into_join_table_with_unique_catch_koans_tags(text, text); Type: FUNCTION; Schema: autogen; Owner: denevell
@@ -51,7 +92,9 @@ ALTER FUNCTION autogen.insert_into_join_table_with_unique_catch_categories_tags(
 
 CREATE FUNCTION insert_into_join_table_with_unique_catch_koans_tags(koan_id_message text, tag_id_tag text) RETURNS void
     LANGUAGE plpgsql
-    AS $$ declare koan_id integer; declare tag_id integer; begin insert into koans (message) values(koan_id_message) returning id into koan_id; begin insert into tags (tag) values(tag_id_tag) returning id into tag_id; exception when unique_violation then select id into tag_id from tags where tag = tag_id_tag; end; insert into koans_tags (koan_id,tag_id) values(koan_id,tag_id); end; $$;
+    AS $$ declare koan_id integer; declare tag_id integer; begin begin insert into tags (tag)  values(tag_id_tag) returning id
+ into tag_id; exception when unique_violation then select id into tag_id from tags where tag = tag_id_tag; end; insert into koans (message)  values(koan_id_message) returning id
+ into koan_id; insert into koans_tags (koan_id,tag_id) values(koan_id,tag_id); end; $$;
 
 
 ALTER FUNCTION autogen.insert_into_join_table_with_unique_catch_koans_tags(koan_id_message text, tag_id_tag text) OWNER TO denevell;
@@ -62,7 +105,9 @@ ALTER FUNCTION autogen.insert_into_join_table_with_unique_catch_koans_tags(koan_
 
 CREATE FUNCTION insert_into_join_table_with_unique_catch_tmp_multicolumn_tags(koan_id_message text, multi_id_one text, multi_id_two text) RETURNS void
     LANGUAGE plpgsql
-    AS $$ declare koan_id integer; declare multi_id integer; begin insert into koans (message) values(koan_id_message) returning id into koan_id; insert into tmp_multicolumn (one,two) values(multi_id_one,multi_id_two) returning id into multi_id; insert into tmp_multicolumn_tags (koan_id,multi_id) values(koan_id,multi_id); end; $$;
+    AS $$ declare koan_id integer; declare multi_id integer; begin insert into tmp_multicolumn (one,two)  values(multi_id_one,multi_id_two) returning id
+ into multi_id; insert into koans (message)  values(koan_id_message) returning id
+ into koan_id; insert into tmp_multicolumn_tags (koan_id,multi_id) values(koan_id,multi_id); end; $$;
 
 
 ALTER FUNCTION autogen.insert_into_join_table_with_unique_catch_tmp_multicolumn_tags(koan_id_message text, multi_id_one text, multi_id_two text) OWNER TO denevell;
@@ -150,6 +195,22 @@ $$;
 ALTER FUNCTION public.autogen_simple_inserts_excluding_defaults() OWNER TO denevell;
 
 --
+-- Name: create_declared(text, text); Type: FUNCTION; Schema: public; Owner: denevell
+--
+
+CREATE FUNCTION create_declared(name text, type text) RETURNS text
+    LANGUAGE plpgsql
+    AS $$
+    declare str text;
+    begin
+        return 'declare ' || name || ' ' || type || '';
+    end;
+$$;
+
+
+ALTER FUNCTION public.create_declared(name text, type text) OWNER TO denevell;
+
+--
 -- Name: create_select_into_on_unique_column(text, text, text); Type: FUNCTION; Schema: public; Owner: denevell
 --
 
@@ -167,6 +228,23 @@ $$;
 
 
 ALTER FUNCTION public.create_select_into_on_unique_column(table_name_with_unique text, value_into text, value_match text) OWNER TO denevell;
+
+--
+-- Name: create_sp(text, text, text, text, text, text); Type: FUNCTION; Schema: public; Owner: denevell
+--
+
+CREATE FUNCTION create_sp(sp_name text, sp_params text, sp_return_value text, sp_lang text, sp_declares text, sp_body text) RETURNS text
+    LANGUAGE plpgsql
+    AS $_$
+    declare str text;
+    begin
+        return 'create or replace function ' || sp_name || ' (' || sp_params 
+        || ') returns ' || sp_return_value || ' language ' || sp_lang || ' as $function$ ' || sp_declares || ' begin ' || sp_body || ' end; $function$;';
+    end;
+$_$;
+
+
+ALTER FUNCTION public.create_sp(sp_name text, sp_params text, sp_return_value text, sp_lang text, sp_declares text, sp_body text) OWNER TO denevell;
 
 --
 -- Name: ex_koan_delete(integer); Type: FUNCTION; Schema: public; Owner: denevell
@@ -394,21 +472,50 @@ CREATE VIEW _columns_foreign_key AS
 ALTER TABLE _columns_foreign_key OWNER TO denevell;
 
 --
--- Name: _columns_primary_key; Type: VIEW; Schema: public; Owner: denevell
+-- Name: _columns_referenced_tables_columns; Type: VIEW; Schema: public; Owner: denevell
 --
 
-CREATE VIEW _columns_primary_key AS
+CREATE VIEW _columns_referenced_tables_columns AS
+ SELECT t0.table_name,
+    t0.column_name,
+    t1.table_name AS referenced_table_name,
+    t1.column_name AS referenced_column_name
+   FROM (_columns_foreign_key t0
+     JOIN ( SELECT t0_1.constraint_name,
+            t1_1.table_name,
+            t1_1.column_name
+           FROM (_columns_foreign_key t0_1
+             LEFT JOIN information_schema.constraint_column_usage t1_1 ON (((t0_1.constraint_name)::text = (t1_1.constraint_name)::text)))) t1 ON (((t0.constraint_name)::text = (t1.constraint_name)::text)));
+
+
+ALTER TABLE _columns_referenced_tables_columns OWNER TO denevell;
+
+--
+-- Name: _tables_join; Type: VIEW; Schema: public; Owner: denevell
+--
+
+CREATE VIEW _tables_join AS
+ SELECT t0.table_name
+   FROM _columns_referenced_tables_columns t0
+  GROUP BY t0.table_name;
+
+
+ALTER TABLE _tables_join OWNER TO denevell;
+
+--
+-- Name: _columns_join_tables; Type: VIEW; Schema: public; Owner: denevell
+--
+
+CREATE VIEW _columns_join_tables AS
  SELECT t0.table_name,
     t1.column_name,
-    t2.data_type,
-    t0.constraint_name
-   FROM ((information_schema.table_constraints t0
-     JOIN information_schema.constraint_column_usage t1 ON (((t0.constraint_name)::text = (t1.constraint_name)::text)))
-     JOIN information_schema.columns t2 ON ((((t2.table_name)::text = (t0.table_name)::text) AND ((t2.column_name)::text = (t1.column_name)::text))))
-  WHERE ((t0.constraint_type)::text = 'PRIMARY KEY'::text);
+    t1.data_type
+   FROM (_tables_join t0
+     JOIN _columns t1 ON (((t1.table_name)::text = (t0.table_name)::text)))
+  ORDER BY t0.table_name, t1.column_name;
 
 
-ALTER TABLE _columns_primary_key OWNER TO denevell;
+ALTER TABLE _columns_join_tables OWNER TO denevell;
 
 --
 -- Name: _tables_public; Type: VIEW; Schema: public; Owner: denevell
@@ -440,6 +547,38 @@ CREATE VIEW _columns_public AS
 ALTER TABLE _columns_public OWNER TO denevell;
 
 --
+-- Name: _columns_not_default; Type: VIEW; Schema: public; Owner: denevell
+--
+
+CREATE VIEW _columns_not_default AS
+ SELECT t0.table_name,
+    t0.column_name,
+    t0.data_type,
+    t0.is_nullable
+   FROM _columns_public t0
+  WHERE (t0.column_default IS NULL);
+
+
+ALTER TABLE _columns_not_default OWNER TO denevell;
+
+--
+-- Name: _columns_primary_key; Type: VIEW; Schema: public; Owner: denevell
+--
+
+CREATE VIEW _columns_primary_key AS
+ SELECT t0.table_name,
+    t1.column_name,
+    t2.data_type,
+    t0.constraint_name
+   FROM ((information_schema.table_constraints t0
+     JOIN information_schema.constraint_column_usage t1 ON (((t0.constraint_name)::text = (t1.constraint_name)::text)))
+     JOIN information_schema.columns t2 ON ((((t2.table_name)::text = (t0.table_name)::text) AND ((t2.column_name)::text = (t1.column_name)::text))))
+  WHERE ((t0.constraint_type)::text = 'PRIMARY KEY'::text);
+
+
+ALTER TABLE _columns_primary_key OWNER TO denevell;
+
+--
 -- Name: _columns_unique; Type: VIEW; Schema: public; Owner: denevell
 --
 
@@ -452,6 +591,21 @@ CREATE VIEW _columns_unique AS
 
 
 ALTER TABLE _columns_unique OWNER TO denevell;
+
+--
+-- Name: _sp_join_table_full_insert_params; Type: VIEW; Schema: public; Owner: denevell
+--
+
+CREATE VIEW _sp_join_table_full_insert_params AS
+ SELECT t0.table_name,
+    t0.column_name AS insert_column_name,
+    (((t0.column_name)::text || '_'::text) || (t1.column_name)::text) AS sp_param_name,
+    t1.data_type AS sp_param_type
+   FROM (_columns_referenced_tables_columns t0
+     JOIN _columns_not_default t1 ON (((t0.referenced_table_name)::text = (t1.table_name)::text)));
+
+
+ALTER TABLE _sp_join_table_full_insert_params OWNER TO denevell;
 
 --
 -- Name: _sp_simple_inserts; Type: VIEW; Schema: public; Owner: denevell
@@ -540,188 +694,37 @@ CREATE TABLE categories_tags (
 ALTER TABLE categories_tags OWNER TO denevell;
 
 --
--- Name: in_columns_public_non_default; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_columns_public_non_default AS
- SELECT t0.table_name,
-    t0.column_name,
-    t0.data_type,
-    t0.is_nullable
-   FROM _columns_public t0
-  WHERE (t0.column_default IS NULL);
-
-
-ALTER TABLE in_columns_public_non_default OWNER TO denevell;
-
---
--- Name: in_foreign_key_referenced_columns; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_foreign_key_referenced_columns AS
- SELECT t0.constraint_name,
-    t1.table_name,
-    t1.column_name
-   FROM (_columns_foreign_key t0
-     LEFT JOIN information_schema.constraint_column_usage t1 ON (((t0.constraint_name)::text = (t1.constraint_name)::text)));
-
-
-ALTER TABLE in_foreign_key_referenced_columns OWNER TO denevell;
-
---
--- Name: in_foreign_keys_and_referenced_table_column; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_foreign_keys_and_referenced_table_column AS
- SELECT t0.constraint_name,
-    t0.table_name,
-    t0.column_name,
-    t1.table_name AS referenced_table_name,
-    t1.column_name AS referenced_column_name
-   FROM (_columns_foreign_key t0
-     JOIN in_foreign_key_referenced_columns t1 ON (((t0.constraint_name)::text = (t1.constraint_name)::text)));
-
-
-ALTER TABLE in_foreign_keys_and_referenced_table_column OWNER TO denevell;
-
---
--- Name: in_columns_referenced_tables; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_columns_referenced_tables AS
- SELECT t0.table_name,
-    t0.column_name,
-    t1.referenced_table_name AS "references"
-   FROM (_columns_public t0
-     LEFT JOIN in_foreign_keys_and_referenced_table_column t1 ON ((((t1.table_name)::text = (t0.table_name)::text) AND ((t1.column_name)::text = (t0.column_name)::text))));
-
-
-ALTER TABLE in_columns_referenced_tables OWNER TO denevell;
-
---
--- Name: in_columns_referenced_tables_only; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_columns_referenced_tables_only AS
- SELECT t0.table_name,
-    t0.column_name,
-    t0."references"
-   FROM in_columns_referenced_tables t0
-  WHERE (t0."references" IS NOT NULL)
-  ORDER BY t0.table_name;
-
-
-ALTER TABLE in_columns_referenced_tables_only OWNER TO denevell;
-
---
--- Name: in_is_join_table; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_is_join_table AS
- SELECT t0.table_name,
-    (count((t0."references")::text) > 0) AS join_table
-   FROM in_columns_referenced_tables t0
-  GROUP BY t0.table_name;
-
-
-ALTER TABLE in_is_join_table OWNER TO denevell;
-
---
--- Name: in_join_tables; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_join_tables AS
- SELECT t0.table_name
-   FROM in_is_join_table t0
-  WHERE (t0.join_table = true);
-
-
-ALTER TABLE in_join_tables OWNER TO denevell;
-
---
--- Name: in_join_table_columns; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_join_table_columns AS
- SELECT t0.table_name,
-    t1.column_name,
-    t1.data_type
-   FROM (in_join_tables t0
-     JOIN _columns t1 ON (((t1.table_name)::text = (t0.table_name)::text)))
-  ORDER BY t0.table_name, t1.column_name;
-
-
-ALTER TABLE in_join_table_columns OWNER TO denevell;
-
---
--- Name: in_join_table_sp_params; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_join_table_sp_params AS
- SELECT t0.table_name,
-    t0.column_name AS insert_column_name,
-    (((t0.column_name)::text || '_'::text) || (t1.column_name)::text) AS sp_param_name,
-    t1.data_type AS sp_param_type
-   FROM (in_columns_referenced_tables_only t0
-     JOIN in_columns_public_non_default t1 ON (((t0."references")::text = (t1.table_name)::text)));
-
-
-ALTER TABLE in_join_table_sp_params OWNER TO denevell;
-
---
--- Name: in_simple_insert_into_excluding_defaults; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_simple_insert_into_excluding_defaults AS
- SELECT t0.table_name,
-    ((((('insert into '::text || (t0.table_name)::text) || ' '::text) || '('::text) || array_to_string(array_agg((t1.column_name)::text), ','::text)) || ') '::text) AS sql
-   FROM (_tables_public t0
-     JOIN _columns_public t1 ON ((((t1.table_name)::text = (t0.table_name)::text) AND (t1.column_default IS NULL))))
-  GROUP BY t0.table_name;
-
-
-ALTER TABLE in_simple_insert_into_excluding_defaults OWNER TO denevell;
-
---
 -- Name: in_join_table_columns_insert_statement; Type: VIEW; Schema: public; Owner: denevell
 --
 
 CREATE VIEW in_join_table_columns_insert_statement AS
  SELECT t0.table_name,
     t0.column_name,
-    (((((((t3.sql || ' values('::text) || array_to_string(t4.param_name_agg, ','::text)) || ') '::text) || 'returning '::text) || (pk.column_name)::text) || '
+    (((((((t3.sql || ' values('::text) || array_to_string(insert_param_values.param_name_agg, ','::text)) || ') '::text) || 'returning '::text) || (pk.column_name)::text) || '
  into '::text) || (t0.column_name)::text) AS insert_statement
-   FROM ((((in_join_table_columns t0
-     JOIN in_columns_referenced_tables_only t2 ON ((((t2.column_name)::text = (t0.column_name)::text) AND ((t2.table_name)::text = (t0.table_name)::text))))
-     JOIN in_simple_insert_into_excluding_defaults t3 ON (((t3.table_name)::text = (t2."references")::text)))
+   FROM ((((_columns_join_tables t0
+     JOIN _columns_referenced_tables_columns t2 ON ((((t2.column_name)::text = (t0.column_name)::text) AND ((t2.table_name)::text = (t0.table_name)::text))))
      JOIN ( SELECT t0_1.table_name,
-            t0_1.insert_column_name,
-            array_agg(t0_1.sp_param_name) AS param_name_agg
-           FROM in_join_table_sp_params t0_1
-          GROUP BY t0_1.table_name, t0_1.insert_column_name) t4 ON ((((t0.table_name)::text = (t4.table_name)::text) AND ((t4.insert_column_name)::text = (t0.column_name)::text))))
+            ((((('insert into '::text || (t0_1.table_name)::text) || ' '::text) || '('::text) || array_to_string(array_agg((t1.column_name)::text), ','::text)) || ') '::text) AS sql
+           FROM (_tables_public t0_1
+             JOIN _columns_public t1 ON ((((t1.table_name)::text = (t0_1.table_name)::text) AND (t1.column_default IS NULL))))
+          GROUP BY t0_1.table_name) t3 ON (((t3.table_name)::text = (t2.referenced_table_name)::text)))
+     JOIN ( SELECT join_column_sp_names.table_name,
+            join_column_sp_names.column_name,
+            array_agg(join_column_sp_names.sp_param_name) AS param_name_agg
+           FROM ( SELECT t0_1.table_name,
+                    t0_1.column_name,
+                    (((t0_1.column_name)::text || '_'::text) || (t1.column_name)::text) AS sp_param_name
+                   FROM (_columns_referenced_tables_columns t0_1
+                     JOIN _columns_not_default t1 ON (((t0_1.referenced_table_name)::text = (t1.table_name)::text)))) join_column_sp_names
+          GROUP BY join_column_sp_names.table_name, join_column_sp_names.column_name) insert_param_values ON ((((t0.table_name)::text = (insert_param_values.table_name)::text) AND ((insert_param_values.column_name)::text = (t0.column_name)::text))))
      JOIN ( SELECT _columns_primary_key.table_name,
             _columns_primary_key.column_name
-           FROM _columns_primary_key) pk ON (((pk.table_name)::text = (t2."references")::text)))
+           FROM _columns_primary_key) pk ON (((pk.table_name)::text = (t2.referenced_table_name)::text)))
   ORDER BY t0.table_name;
 
 
 ALTER TABLE in_join_table_columns_insert_statement OWNER TO denevell;
-
---
--- Name: in_join_table_columns_select_into_via_unique_statement; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_join_table_columns_select_into_via_unique_statement AS
- SELECT t0.table_name,
-    t0.column_name,
-    t0.insert_statement,
-    create_select_into_on_unique_column((t2.table_name)::text, (t0.column_name)::text, (((t0.column_name)::text || '_'::text) || (t2.column_name)::text)) AS select_into_via_unique
-   FROM ((in_join_table_columns_insert_statement t0
-     LEFT JOIN in_columns_referenced_tables t1 ON ((((t1.table_name)::text = (t0.table_name)::text) AND ((t1.column_name)::text = (t0.column_name)::text))))
-     LEFT JOIN _columns_unique t2 ON (((t2.table_name)::text = (t1."references")::text)));
-
-
-ALTER TABLE in_join_table_columns_select_into_via_unique_statement OWNER TO denevell;
 
 --
 -- Name: in_join_table_columns_insert_statement_with_unique_catch; Type: VIEW; Schema: public; Owner: denevell
@@ -734,85 +737,16 @@ CREATE VIEW in_join_table_columns_insert_statement_with_unique_catch AS
             WHEN (t0.select_into_via_unique IS NULL) THEN (t0.insert_statement || ';'::text)
             ELSE (((('begin '::text || t0.insert_statement) || '; exception when unique_violation then '::text) || t0.select_into_via_unique) || '; end;'::text)
         END AS sql
-   FROM in_join_table_columns_select_into_via_unique_statement t0;
+   FROM ( SELECT t0_1.table_name,
+            t0_1.column_name,
+            t0_1.insert_statement,
+            create_select_into_on_unique_column((t2.table_name)::text, (t0_1.column_name)::text, (((t0_1.column_name)::text || '_'::text) || (t2.column_name)::text)) AS select_into_via_unique
+           FROM ((in_join_table_columns_insert_statement t0_1
+             LEFT JOIN _columns_referenced_tables_columns t1 ON ((((t1.table_name)::text = (t0_1.table_name)::text) AND ((t1.column_name)::text = (t0_1.column_name)::text))))
+             LEFT JOIN _columns_unique t2 ON (((t2.table_name)::text = (t1.referenced_table_name)::text)))) t0;
 
 
 ALTER TABLE in_join_table_columns_insert_statement_with_unique_catch OWNER TO denevell;
-
---
--- Name: in_join_table_columns_insert_statements_agg; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_join_table_columns_insert_statements_agg AS
- SELECT t0.table_name,
-    (array_to_string(array_agg(t0.insert_statement), '; '::text) || ';'::text) AS insert_statement
-   FROM in_join_table_columns_insert_statement t0
-  GROUP BY t0.table_name;
-
-
-ALTER TABLE in_join_table_columns_insert_statements_agg OWNER TO denevell;
-
---
--- Name: in_join_table_columns_insert_statements_with_unique_catche_agg; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_join_table_columns_insert_statements_with_unique_catche_agg AS
- SELECT t0.table_name,
-    array_to_string(array_agg(t0.sql), ' '::text) AS insert_statement
-   FROM in_join_table_columns_insert_statement_with_unique_catch t0
-  GROUP BY t0.table_name;
-
-
-ALTER TABLE in_join_table_columns_insert_statements_with_unique_catche_agg OWNER TO denevell;
-
---
--- Name: in_join_table_final_inserts; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_join_table_final_inserts AS
- SELECT t0.table_name,
-    (((t6.sql || ' values('::text) || array_to_string(t7.name_agg, ','::text)) || ')'::text) AS insert_statement
-   FROM ((in_join_tables t0
-     JOIN in_simple_insert_into_excluding_defaults t6 ON (((t6.table_name)::text = (t0.table_name)::text)))
-     JOIN ( SELECT t0_1.table_name,
-            array_agg((t0_1.column_name)::text) AS name_agg
-           FROM in_join_table_columns t0_1
-          GROUP BY t0_1.table_name) t7 ON (((t7.table_name)::text = (t0.table_name)::text)))
-  ORDER BY t0.table_name;
-
-
-ALTER TABLE in_join_table_final_inserts OWNER TO denevell;
-
---
--- Name: in_join_table_sp_declared_vars; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_join_table_sp_declared_vars AS
- SELECT t0.table_name,
-    (array_to_string(array_agg(t1.declared_var), '; '::text) || ';'::text) AS declare_var_statements
-   FROM (in_join_table_columns t0
-     JOIN ( SELECT t0_1.table_name,
-            t0_1.column_name,
-            ((('declare '::text || (t0_1.column_name)::text) || ' '::text) || (t0_1.data_type)::text) AS declared_var
-           FROM _columns_public t0_1) t1 ON ((((t0.table_name)::text = (t1.table_name)::text) AND ((t0.column_name)::text = (t1.column_name)::text))))
-  GROUP BY t0.table_name, t0.data_type
-  ORDER BY t0.table_name;
-
-
-ALTER TABLE in_join_table_sp_declared_vars OWNER TO denevell;
-
---
--- Name: in_join_table_sp_params_concat; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW in_join_table_sp_params_concat AS
- SELECT t0.table_name,
-    ((t0.sp_param_name || ' '::text) || (t0.sp_param_type)::text) AS param_name_concat
-   FROM in_join_table_sp_params t0
-  ORDER BY t0.table_name;
-
-
-ALTER TABLE in_join_table_sp_params_concat OWNER TO denevell;
 
 --
 -- Name: in_join_table_sp_insert_functions; Type: VIEW; Schema: public; Owner: denevell
@@ -820,15 +754,37 @@ ALTER TABLE in_join_table_sp_params_concat OWNER TO denevell;
 
 CREATE VIEW in_join_table_sp_insert_functions AS
  SELECT t1.table_name,
-    (((((((((('create or replace function autogen.insert_into_join_table_'::text || (t0.table_name)::text) || ' ('::text) || t1.param_name_conat_agg) || ') returns void language plpgsql as $function$ '::text) || t2.declare_var_statements) || ' begin '::text) || t3.insert_statement) || ' '::text) || t4.insert_statement) || '; end; $function$;'::text) AS sql
-   FROM ((((in_join_tables t0
+    create_sp(('autogen.insert_into_join_table_'::text || (t0.table_name)::text), t1.param_name_conat_agg, 'void'::text, 'plpgsql'::text, t2.declare_var_statements, (((t3.insert_statement || ' '::text) || final_insert_statement.insert_statement) || ';'::text)) AS sql
+   FROM ((((_tables_join t0
      JOIN ( SELECT t0_1.table_name,
             array_to_string(array_agg(t0_1.param_name_concat), ','::text) AS param_name_conat_agg
-           FROM in_join_table_sp_params_concat t0_1
+           FROM ( SELECT t0_2.table_name,
+                    ((t0_2.sp_param_name || ' '::text) || (t0_2.sp_param_type)::text) AS param_name_concat
+                   FROM _sp_join_table_full_insert_params t0_2
+                  ORDER BY t0_2.table_name) t0_1
           GROUP BY t0_1.table_name) t1 ON (((t1.table_name)::text = (t0.table_name)::text)))
-     JOIN in_join_table_sp_declared_vars t2 ON (((t2.table_name)::text = (t0.table_name)::text)))
-     JOIN in_join_table_columns_insert_statements_agg t3 ON (((t3.table_name)::text = (t0.table_name)::text)))
-     JOIN in_join_table_final_inserts t4 ON (((t4.table_name)::text = (t0.table_name)::text)));
+     JOIN ( SELECT t0_1.table_name,
+            (array_to_string(array_agg(t1_1.declared_var), '; '::text) || ';'::text) AS declare_var_statements
+           FROM (_columns_join_tables t0_1
+             JOIN ( SELECT t0_1_1.table_name,
+                    t0_1_1.column_name,
+                    create_declared((t0_1_1.column_name)::text, (t0_1_1.data_type)::text) AS declared_var
+                   FROM _columns_public t0_1_1) t1_1 ON ((((t0_1.table_name)::text = (t1_1.table_name)::text) AND ((t0_1.column_name)::text = (t1_1.column_name)::text))))
+          GROUP BY t0_1.table_name, t0_1.data_type
+          ORDER BY t0_1.table_name) t2 ON (((t2.table_name)::text = (t0.table_name)::text)))
+     JOIN ( SELECT t0_1.table_name,
+            (array_to_string(array_agg(t0_1.insert_statement), '; '::text) || ';'::text) AS insert_statement
+           FROM in_join_table_columns_insert_statement t0_1
+          GROUP BY t0_1.table_name) t3 ON (((t3.table_name)::text = (t0.table_name)::text)))
+     JOIN ( SELECT join_tables.table_name,
+            ((((((('insert into '::text || (join_tables.table_name)::text) || ' ('::text) || array_to_string(t7.name_agg, ','::text)) || ') '::text) || ' values('::text) || array_to_string(t7.name_agg, ','::text)) || ')'::text) AS insert_statement
+           FROM ((_tables_join join_tables
+             JOIN _columns_not_default join_table_columns ON (((join_table_columns.table_name)::text = (join_tables.table_name)::text)))
+             JOIN ( SELECT t0_1_1.table_name,
+                    array_agg((t0_1_1.column_name)::text) AS name_agg
+                   FROM _columns_join_tables t0_1_1
+                  GROUP BY t0_1_1.table_name) t7 ON (((t7.table_name)::text = (join_tables.table_name)::text)))
+          ORDER BY join_tables.table_name) final_insert_statement ON (((final_insert_statement.table_name)::text = (t0.table_name)::text)));
 
 
 ALTER TABLE in_join_table_sp_insert_functions OWNER TO denevell;
@@ -839,15 +795,36 @@ ALTER TABLE in_join_table_sp_insert_functions OWNER TO denevell;
 
 CREATE VIEW in_join_table_sp_insert_functions_with_unique_catch AS
  SELECT t1.table_name,
-    (((((((((('create or replace function autogen.insert_into_join_table_with_unique_catch_'::text || (t0.table_name)::text) || ' ('::text) || t1.param_name_conat_agg) || ') returns void language plpgsql as $function$ '::text) || t2.declare_var_statements) || ' begin '::text) || t3.insert_statement) || ' '::text) || t4.insert_statement) || '; end; $function$;'::text) AS sql
-   FROM ((((in_join_tables t0
+    create_sp(('autogen.insert_into_join_table_with_unique_catch_'::text || (t0.table_name)::text), t1.param_name_conat_agg, 'void'::text, 'plpgsql'::text, t2.declare_var_statements, (((t3.insert_statement || ' '::text) || t4.insert_statement) || ';'::text)) AS sql
+   FROM ((((_tables_join t0
      JOIN ( SELECT t0_1.table_name,
             array_to_string(array_agg(t0_1.param_name_concat), ','::text) AS param_name_conat_agg
-           FROM in_join_table_sp_params_concat t0_1
+           FROM ( SELECT t0_2.table_name,
+                    ((t0_2.sp_param_name || ' '::text) || (t0_2.sp_param_type)::text) AS param_name_concat
+                   FROM _sp_join_table_full_insert_params t0_2
+                  ORDER BY t0_2.table_name) t0_1
           GROUP BY t0_1.table_name) t1 ON (((t1.table_name)::text = (t0.table_name)::text)))
-     JOIN in_join_table_sp_declared_vars t2 ON (((t2.table_name)::text = (t0.table_name)::text)))
-     JOIN in_join_table_columns_insert_statements_with_unique_catche_agg t3 ON (((t3.table_name)::text = (t0.table_name)::text)))
-     JOIN in_join_table_final_inserts t4 ON (((t4.table_name)::text = (t0.table_name)::text)));
+     JOIN ( SELECT t0_1.table_name,
+            (array_to_string(array_agg(t1_1.declared_var), '; '::text) || ';'::text) AS declare_var_statements
+           FROM (_columns_join_tables t0_1
+             JOIN ( SELECT t0_1_1.table_name,
+                    t0_1_1.column_name,
+                    create_declared((t0_1_1.column_name)::text, (t0_1_1.data_type)::text) AS declared_var
+                   FROM _columns_public t0_1_1) t1_1 ON ((((t0_1.table_name)::text = (t1_1.table_name)::text) AND ((t0_1.column_name)::text = (t1_1.column_name)::text))))
+          GROUP BY t0_1.table_name, t0_1.data_type
+          ORDER BY t0_1.table_name) t2 ON (((t2.table_name)::text = (t0.table_name)::text)))
+     JOIN ( SELECT t0_1.table_name,
+            array_to_string(array_agg(t0_1.sql), ' '::text) AS insert_statement
+           FROM in_join_table_columns_insert_statement_with_unique_catch t0_1
+          GROUP BY t0_1.table_name) t3 ON (((t3.table_name)::text = (t0.table_name)::text)))
+     JOIN ( SELECT t0_1.table_name,
+            (((((('insert into '::text || (t0_1.table_name)::text) || ' ('::text) || array_to_string(t7.name_agg, ','::text)) || ') values('::text) || array_to_string(t7.name_agg, ','::text)) || ')'::text) AS insert_statement
+           FROM (_tables_join t0_1
+             JOIN ( SELECT t0_1_1.table_name,
+                    array_agg((t0_1_1.column_name)::text) AS name_agg
+                   FROM _columns_join_tables t0_1_1
+                  GROUP BY t0_1_1.table_name) t7 ON (((t7.table_name)::text = (t0_1.table_name)::text)))
+          ORDER BY t0_1.table_name) t4 ON (((t4.table_name)::text = (t0.table_name)::text)));
 
 
 ALTER TABLE in_join_table_sp_insert_functions_with_unique_catch OWNER TO denevell;
