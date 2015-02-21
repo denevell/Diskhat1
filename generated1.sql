@@ -62,7 +62,7 @@ ALTER FUNCTION autogen.insert_into_join_table_with_unique_catch_categories_tags(
 
 CREATE FUNCTION insert_into_join_table_with_unique_catch_koans_tags(koan_id_message text, tag_id_tag text) RETURNS void
     LANGUAGE plpgsql
-    AS $$ declare koan_id integer; declare tag_id integer; begin insert into koans (message) values(koan_id_message) returning id into koan_id; begin insert into tags (tag) values(tag_id_tag) returning id into tag_id; exception when unique_violation then select id into tag_id from tags where tag = tag_id_tag; end; insert into koans_tags (koan_id,tag_id) values(koan_id,tag_id); end; $$;
+    AS $$ declare koan_id integer; declare tag_id integer;  begin insert into koans (message) values(koan_id_message) returning id into koan_id; begin insert into tags (tag) values(tag_id_tag) returning id into tag_id; exception when unique_violation then select id into tag_id from tags where tag = tag_id_tag; end; insert into koans_tags (koan_id,tag_id) values(koan_id,tag_id); end; $$;
 
 
 ALTER FUNCTION autogen.insert_into_join_table_with_unique_catch_koans_tags(koan_id_message text, tag_id_tag text) OWNER TO denevell;
@@ -998,37 +998,25 @@ ALTER TABLE in_join_table_sp_insert_functions OWNER TO denevell;
 --
 
 CREATE VIEW in_join_table_sp_insert_functions_with_unique_catch AS
- SELECT t1.table_name,
-    create_sp(('autogen.insert_into_join_table_with_unique_catch_'::text || (t0.table_name)::text), t1.param_name_conat_agg, 'void'::text, 'plpgsql'::text, t2.declare_var_statements, (((t3.insert_statement || ' '::text) || t4.insert_statement) || ';'::text)) AS sql
-   FROM ((((_tables_join t0
-     JOIN ( SELECT t0_1.table_name,
-            array_to_string(array_agg(t0_1.param_name_concat), ','::text) AS param_name_conat_agg
-           FROM ( SELECT t0_2.table_name,
-                    ((t0_2.sp_param_name || ' '::text) || (t0_2.sp_param_type)::text) AS param_name_concat
-                   FROM _sp_join_table_full_insert_params t0_2
-                  ORDER BY t0_2.table_name) t0_1
-          GROUP BY t0_1.table_name) t1 ON (((t1.table_name)::text = (t0.table_name)::text)))
-     JOIN ( SELECT t0_1.table_name,
-            (array_to_string(array_agg(t1_1.declared_var), '; '::text) || ';'::text) AS declare_var_statements
-           FROM (_columns_join_tables t0_1
-             JOIN ( SELECT t0_1_1.table_name,
-                    t0_1_1.column_name,
-                    create_declared((t0_1_1.column_name)::text, (t0_1_1.data_type)::text) AS declared_var
-                   FROM _columns_public t0_1_1) t1_1 ON ((((t0_1.table_name)::text = (t1_1.table_name)::text) AND ((t0_1.column_name)::text = (t1_1.column_name)::text))))
-          GROUP BY t0_1.table_name, t0_1.data_type
-          ORDER BY t0_1.table_name) t2 ON (((t2.table_name)::text = (t0.table_name)::text)))
+ SELECT sp_params.table_name,
+    create_sp(('autogen.insert_into_join_table_with_unique_catch_'::text || (join_tables.table_name)::text), sp_params.param_name_conat_agg, 'void'::text, 'plpgsql'::text, declared_vars.declared_vars, (((insert_statements.insert_statement || ' '::text) || final_insert_statement.insert_statement) || ';'::text)) AS sql
+   FROM ((((_tables_join join_tables
+     JOIN ( SELECT full_insert_params.table_name,
+            create_join_sp_params(array_agg(full_insert_params.sp_param_name), array_agg((full_insert_params.sp_param_type)::text)) AS param_name_conat_agg
+           FROM _sp_join_table_full_insert_params full_insert_params
+          GROUP BY full_insert_params.table_name) sp_params ON (((sp_params.table_name)::text = (join_tables.table_name)::text)))
+     JOIN ( SELECT columns_public.table_name,
+            create_declareds(array_agg((columns_public.column_name)::text), array_agg((columns_public.data_type)::text)) AS declared_vars
+           FROM _columns_public columns_public
+          GROUP BY columns_public.table_name) declared_vars ON (((declared_vars.table_name)::text = (join_tables.table_name)::text)))
      JOIN ( SELECT t0_1.table_name,
             array_to_string(array_agg(t0_1.sql), ' '::text) AS insert_statement
            FROM in_join_table_columns_insert_statement_with_unique_catch t0_1
-          GROUP BY t0_1.table_name) t3 ON (((t3.table_name)::text = (t0.table_name)::text)))
-     JOIN ( SELECT t0_1.table_name,
-            create_insert((t0_1.table_name)::text, array_to_string(t7.name_agg, ','::text), array_to_string(t7.name_agg, ','::text)) AS insert_statement
-           FROM (_tables_join t0_1
-             JOIN ( SELECT t0_1_1.table_name,
-                    array_agg((t0_1_1.column_name)::text) AS name_agg
-                   FROM _columns_join_tables t0_1_1
-                  GROUP BY t0_1_1.table_name) t7 ON (((t7.table_name)::text = (t0_1.table_name)::text)))
-          ORDER BY t0_1.table_name) t4 ON (((t4.table_name)::text = (t0.table_name)::text)));
+          GROUP BY t0_1.table_name) insert_statements ON (((insert_statements.table_name)::text = (join_tables.table_name)::text)))
+     JOIN ( SELECT join_columns.table_name,
+            create_insert((join_columns.table_name)::text, array_to_string(array_agg((join_columns.column_name)::text), ','::text), array_to_string(array_agg((join_columns.column_name)::text), ','::text)) AS insert_statement
+           FROM _columns_join_tables join_columns
+          GROUP BY join_columns.table_name) final_insert_statement ON (((final_insert_statement.table_name)::text = (join_tables.table_name)::text)));
 
 
 ALTER TABLE in_join_table_sp_insert_functions_with_unique_catch OWNER TO denevell;
