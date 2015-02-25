@@ -664,6 +664,19 @@ $$;
 ALTER FUNCTION public.in_koans_tags_insert(_koanid integer, _tagids integer[]) OWNER TO denevell;
 
 --
+-- Name: array_accum(anyarray); Type: AGGREGATE; Schema: public; Owner: denevell
+--
+
+CREATE AGGREGATE array_accum(anyarray) (
+    SFUNC = array_cat,
+    STYPE = anyarray,
+    INITCOND = '{}'
+);
+
+
+ALTER AGGREGATE public.array_accum(anyarray) OWNER TO denevell;
+
+--
 -- Name: _columns; Type: VIEW; Schema: public; Owner: denevell
 --
 
@@ -1174,8 +1187,8 @@ ALTER TABLE koans OWNER TO denevell;
 --
 
 CREATE TABLE koans_tags (
-    koan_id integer,
-    tag_id integer
+    koans_id integer,
+    tags_id integer
 );
 
 
@@ -1235,8 +1248,10 @@ ALTER TABLE tags OWNER TO denevell;
 CREATE VIEW tmp AS
  SELECT tables.table_name,
     sp_params.sql AS params,
-    declared.sql AS declared
-   FROM (((_tables_not_join tables
+    declared.sql AS declared,
+    table_inserts_grouped.sql AS inserts,
+    table_join_inserts_grouped.sql AS joins
+   FROM ((((_tables_not_join tables
      JOIN ( SELECT table_references.table_name,
             create_join_sp_params(array_agg(param_names.sp_param), array_agg((param_names.data_type)::text)) AS sql
            FROM ((_tables_intransitive_references table_references
@@ -1248,12 +1263,34 @@ CREATE VIEW tmp AS
            FROM (_tables_intransitive_references table_references
              JOIN _columns_primary_key columns ON ((table_references.intransitive_references = (columns.table_name)::text)))
           GROUP BY table_references.table_name) declared ON (((declared.table_name)::text = (tables.table_name)::text)))
-     JOIN ( SELECT table_references.table_name,
-            array_agg(table_references.intransitive_references) AS array_agg,
-            array_agg((columns.column_name)::text) AS array_agg
-           FROM (_tables_intransitive_references table_references
-             JOIN _columns_not_default columns ON ((table_references.intransitive_references = (columns.table_name)::text)))
-          GROUP BY table_references.table_name) table_inserts(table_name, array_agg, array_agg_1) ON (((table_inserts.table_name)::text = (tables.table_name)::text)));
+     JOIN ( SELECT table_inserts.table_name,
+            array_to_string(array_agg(table_inserts.sql), '; '::text) AS sql
+           FROM ( SELECT table_references.table_name,
+                    ((((((((('insert into '::text || table_references.intransitive_references) || ' ('::text) || columns.column_names) || ') values('::text) || inputs.column_values) || ') returning id into '::text) || table_references.intransitive_references) || '_'::text) || 'id'::text) AS sql
+                   FROM ((_tables_intransitive_references table_references
+                     JOIN ( SELECT _columns_not_default.table_name,
+                            array_to_string(array_agg((_columns_not_default.column_name)::text), ','::text) AS column_names
+                           FROM _columns_not_default
+                          GROUP BY _columns_not_default.table_name) columns ON ((table_references.intransitive_references = (columns.table_name)::text)))
+                     JOIN ( SELECT param_names.table_name,
+                            array_to_string(array_agg(param_names.sp_param), ','::text) AS column_values
+                           FROM _sp_table_param_names param_names
+                          GROUP BY param_names.table_name) inputs ON ((table_references.intransitive_references = (inputs.table_name)::text)))) table_inserts
+          GROUP BY table_inserts.table_name) table_inserts_grouped ON (((table_inserts_grouped.table_name)::text = (tables.table_name)::text)))
+     JOIN ( SELECT table_inserts.table_name,
+            array_to_string(array_agg(table_inserts.sql), '; '::text) AS sql
+           FROM ( SELECT table_references.table_name,
+                    (((((('insert into '::text || table_references."references") || ' ('::text) || columns.column_names) || ') values('::text) || columns.column_names) || ')'::text) AS sql
+                   FROM ((_tables_references table_references
+                     JOIN ( SELECT _columns_not_default.table_name,
+                            array_to_string(array_agg((_columns_not_default.column_name)::text), ','::text) AS column_names
+                           FROM _columns_not_default
+                          GROUP BY _columns_not_default.table_name) columns ON ((table_references."references" = (columns.table_name)::text)))
+                     JOIN ( SELECT param_names.table_name,
+                            array_to_string(array_agg(param_names.sp_param), ','::text) AS column_values
+                           FROM _sp_table_param_names param_names
+                          GROUP BY param_names.table_name) inputs ON ((table_references."references" = (inputs.table_name)::text)))) table_inserts
+          GROUP BY table_inserts.table_name) table_join_inserts_grouped ON (((table_join_inserts_grouped.table_name)::text = (tables.table_name)::text)));
 
 
 ALTER TABLE tmp OWNER TO denevell;
@@ -1290,8 +1327,8 @@ ALTER TABLE tmp_multicolumn OWNER TO denevell;
 --
 
 CREATE TABLE tmp_multicolumn_tags (
-    multi_id integer,
-    koan_id integer
+    tmp_multicolumn_tags_id integer,
+    koans_id integer
 );
 
 
@@ -1379,7 +1416,7 @@ ALTER TABLE ONLY categories_tags
 --
 
 ALTER TABLE ONLY koans_tags
-    ADD CONSTRAINT koans_tags_koan_id_fkey FOREIGN KEY (koan_id) REFERENCES koans(id) ON DELETE CASCADE;
+    ADD CONSTRAINT koans_tags_koan_id_fkey FOREIGN KEY (koans_id) REFERENCES koans(id) ON DELETE CASCADE;
 
 
 --
@@ -1387,7 +1424,7 @@ ALTER TABLE ONLY koans_tags
 --
 
 ALTER TABLE ONLY koans_tags
-    ADD CONSTRAINT koans_tags_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES tags(id);
+    ADD CONSTRAINT koans_tags_tag_id_fkey FOREIGN KEY (tags_id) REFERENCES tags(id);
 
 
 --
@@ -1395,7 +1432,7 @@ ALTER TABLE ONLY koans_tags
 --
 
 ALTER TABLE ONLY tmp_multicolumn_tags
-    ADD CONSTRAINT tmp_multicolumn_tags_koan_id_fkey FOREIGN KEY (koan_id) REFERENCES koans(id);
+    ADD CONSTRAINT tmp_multicolumn_tags_koan_id_fkey FOREIGN KEY (koans_id) REFERENCES koans(id);
 
 
 --
@@ -1403,7 +1440,7 @@ ALTER TABLE ONLY tmp_multicolumn_tags
 --
 
 ALTER TABLE ONLY tmp_multicolumn_tags
-    ADD CONSTRAINT tmp_multicolumn_tags_multi_id_fkey FOREIGN KEY (multi_id) REFERENCES tmp_multicolumn(id);
+    ADD CONSTRAINT tmp_multicolumn_tags_multi_id_fkey FOREIGN KEY (tmp_multicolumn_tags_id) REFERENCES tmp_multicolumn(id);
 
 
 --
