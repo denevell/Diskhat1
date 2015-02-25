@@ -748,7 +748,8 @@ ALTER TABLE _columns_join_tables OWNER TO denevell;
 CREATE VIEW _tables_public AS
  SELECT tables.table_name
    FROM information_schema.tables
-  WHERE ((((tables.table_schema)::text = 'public'::text) AND ((tables.table_name)::text <> 'schema_version'::text)) AND ((tables.table_type)::text = 'BASE TABLE'::text));
+  WHERE ((((tables.table_schema)::text = 'public'::text) AND ((tables.table_name)::text <> 'schema_version'::text)) AND ((tables.table_type)::text = 'BASE TABLE'::text))
+  ORDER BY tables.table_name;
 
 
 ALTER TABLE _tables_public OWNER TO denevell;
@@ -900,6 +901,63 @@ CREATE VIEW _sp_simple_inserts_excluding_defaults AS
 
 
 ALTER TABLE _sp_simple_inserts_excluding_defaults OWNER TO denevell;
+
+--
+-- Name: _sp_table_param_names; Type: VIEW; Schema: public; Owner: denevell
+--
+
+CREATE VIEW _sp_table_param_names AS
+ SELECT _columns_not_default.table_name,
+    _columns_not_default.column_name,
+    _columns_not_default.data_type,
+    (((_columns_not_default.table_name)::text || '_'::text) || (_columns_not_default.column_name)::text) AS sp_param
+   FROM _columns_not_default;
+
+
+ALTER TABLE _sp_table_param_names OWNER TO denevell;
+
+--
+-- Name: _tables_references; Type: VIEW; Schema: public; Owner: denevell
+--
+
+CREATE VIEW _tables_references AS
+ SELECT _columns_referenced_tables_columns.referenced_table_name AS table_name,
+    unnest(array_agg(DISTINCT (_columns_referenced_tables_columns.table_name)::text)) AS "references"
+   FROM _columns_referenced_tables_columns
+  GROUP BY _columns_referenced_tables_columns.referenced_table_name
+  ORDER BY _columns_referenced_tables_columns.referenced_table_name;
+
+
+ALTER TABLE _tables_references OWNER TO denevell;
+
+--
+-- Name: _tables_intransitive_references; Type: VIEW; Schema: public; Owner: denevell
+--
+
+CREATE VIEW _tables_intransitive_references AS
+ SELECT t0.table_name,
+    unnest(array_agg(DISTINCT (t1.table_name)::text)) AS intransitive_references
+   FROM (_tables_references t0
+     JOIN _tables_references t1 ON ((t1."references" = t0."references")))
+  WHERE ((t1.table_name)::text <> (t0.table_name)::text)
+  GROUP BY t0.table_name;
+
+
+ALTER TABLE _tables_intransitive_references OWNER TO denevell;
+
+--
+-- Name: _tables_not_join; Type: VIEW; Schema: public; Owner: denevell
+--
+
+CREATE VIEW _tables_not_join AS
+ SELECT _tables_public.table_name
+   FROM _tables_public
+EXCEPT
+ SELECT _tables_join.table_name
+   FROM _tables_join;
+
+
+ALTER TABLE _tables_not_join OWNER TO denevell;
 
 SET default_tablespace = '';
 
@@ -1169,6 +1227,36 @@ CREATE TABLE tags (
 
 
 ALTER TABLE tags OWNER TO denevell;
+
+--
+-- Name: tmp; Type: VIEW; Schema: public; Owner: denevell
+--
+
+CREATE VIEW tmp AS
+ SELECT tables.table_name,
+    sp_params.sql AS params,
+    declared.sql AS declared
+   FROM (((_tables_not_join tables
+     JOIN ( SELECT table_references.table_name,
+            create_join_sp_params(array_agg(param_names.sp_param), array_agg((param_names.data_type)::text)) AS sql
+           FROM ((_tables_intransitive_references table_references
+             JOIN _columns_not_default columns ON ((table_references.intransitive_references = (columns.table_name)::text)))
+             JOIN _sp_table_param_names param_names ON ((((param_names.table_name)::text = table_references.intransitive_references) AND ((param_names.column_name)::text = (columns.column_name)::text))))
+          GROUP BY table_references.table_name) sp_params ON (((sp_params.table_name)::text = (tables.table_name)::text)))
+     JOIN ( SELECT table_references.table_name,
+            create_declareds(array_agg((table_references.intransitive_references || '_id'::text)), array_agg((columns.data_type)::text)) AS sql
+           FROM (_tables_intransitive_references table_references
+             JOIN _columns_primary_key columns ON ((table_references.intransitive_references = (columns.table_name)::text)))
+          GROUP BY table_references.table_name) declared ON (((declared.table_name)::text = (tables.table_name)::text)))
+     JOIN ( SELECT table_references.table_name,
+            array_agg(table_references.intransitive_references) AS array_agg,
+            array_agg((columns.column_name)::text) AS array_agg
+           FROM (_tables_intransitive_references table_references
+             JOIN _columns_not_default columns ON ((table_references.intransitive_references = (columns.table_name)::text)))
+          GROUP BY table_references.table_name) table_inserts(table_name, array_agg, array_agg_1) ON (((table_inserts.table_name)::text = (tables.table_name)::text)));
+
+
+ALTER TABLE tmp OWNER TO denevell;
 
 --
 -- Name: tmp_multicolumn_id_seq; Type: SEQUENCE; Schema: public; Owner: denevell
