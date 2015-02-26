@@ -664,6 +664,17 @@ $$;
 ALTER FUNCTION public.in_koans_tags_insert(_koanid integer, _tagids integer[]) OWNER TO denevell;
 
 --
+-- Name: insert_w_joins_koans(text, text, text, text); Type: FUNCTION; Schema: public; Owner: denevell
+--
+
+CREATE FUNCTION insert_w_joins_koans(koans_message text, tags_tag text, tmp_multicolumn_two text, tmp_multicolumn_one text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$ declare tags_id integer; declare tmp_multicolumn_id integer; declare koans_id integer; begin insert into koans (message) values(koans_message) returning id into koans_id;insert into tags (tag) values(tags_tag) returning id into tags_id; insert into tmp_multicolumn (one,two) values(tmp_multicolumn_one,tmp_multicolumn_two) returning id into tmp_multicolumn_id;insert into koans_tags (koans_id,tags_id) values(koans_id,tags_id); insert into tmp_multicolumn_tags (koans_id,tmp_multicolumn_id) values(koans_id,tmp_multicolumn_id); end; $$;
+
+
+ALTER FUNCTION public.insert_w_joins_koans(koans_message text, tags_tag text, tmp_multicolumn_two text, tmp_multicolumn_one text) OWNER TO denevell;
+
+--
 -- Name: array_accum(anyarray); Type: AGGREGATE; Schema: public; Owner: denevell
 --
 
@@ -972,6 +983,66 @@ EXCEPT
 
 ALTER TABLE _tables_not_join OWNER TO denevell;
 
+--
+-- Name: _sp_table_w_join_inserts; Type: VIEW; Schema: public; Owner: denevell
+--
+
+CREATE VIEW _sp_table_w_join_inserts AS
+ SELECT create_sp(('insert_w_joins_'::text || (tables.table_name)::text), (main_sp_params.params || sp_params.sql), 'void'::text, 'plpgsql'::text, declared.sql, (((((main_insert.sql || ';'::text) || table_inserts_grouped.sql) || ';'::text) || table_join_inserts_grouped.sql) || ';'::text)) AS create_sp
+   FROM ((((((_tables_not_join tables
+     JOIN ( SELECT table_references.table_name,
+            create_join_sp_params(array_agg(param_names.sp_param), array_agg((param_names.data_type)::text)) AS sql
+           FROM ((_tables_intransitive_references table_references
+             JOIN _columns_not_default columns ON ((table_references.intransitive_references = (columns.table_name)::text)))
+             JOIN _sp_table_param_names param_names ON ((((param_names.table_name)::text = table_references.intransitive_references) AND ((param_names.column_name)::text = (columns.column_name)::text))))
+          GROUP BY table_references.table_name) sp_params ON (((sp_params.table_name)::text = (tables.table_name)::text)))
+     JOIN ( SELECT cols.table_name,
+            (create_join_sp_params(array_agg(param_names.sp_param), array_agg((param_names.data_type)::text)) || ', '::text) AS params
+           FROM (_columns_not_default cols
+             JOIN _sp_table_param_names param_names ON (((param_names.column_name)::text = (cols.column_name)::text)))
+          GROUP BY cols.table_name) main_sp_params ON (((main_sp_params.table_name)::text = (tables.table_name)::text)))
+     JOIN ( SELECT table_references.table_name,
+            (((create_declareds(array_agg((table_references.intransitive_references || '_id'::text)), array_agg((columns.data_type)::text)) || 'declare '::text) || (table_references.table_name)::text) || '_id integer;'::text) AS sql
+           FROM (_tables_intransitive_references table_references
+             JOIN _columns_primary_key columns ON ((table_references.intransitive_references = (columns.table_name)::text)))
+          GROUP BY table_references.table_name) declared ON (((declared.table_name)::text = (tables.table_name)::text)))
+     JOIN ( SELECT table_inserts.table_name,
+            array_to_string(array_agg(table_inserts.sql), '; '::text) AS sql
+           FROM ( SELECT table_references.table_name,
+                    create_insert(table_references.intransitive_references, columns.column_names, inputs.column_values, 'id'::text, ((table_references.intransitive_references || '_'::text) || 'id'::text)) AS sql
+                   FROM ((_tables_intransitive_references table_references
+                     JOIN ( SELECT _columns_not_default.table_name,
+                            array_to_string(array_agg((_columns_not_default.column_name)::text), ','::text) AS column_names
+                           FROM _columns_not_default
+                          GROUP BY _columns_not_default.table_name) columns ON ((table_references.intransitive_references = (columns.table_name)::text)))
+                     JOIN ( SELECT param_names.table_name,
+                            array_to_string(array_agg(param_names.sp_param), ','::text) AS column_values
+                           FROM _sp_table_param_names param_names
+                          GROUP BY param_names.table_name) inputs ON ((table_references.intransitive_references = (inputs.table_name)::text)))) table_inserts
+          GROUP BY table_inserts.table_name) table_inserts_grouped ON (((table_inserts_grouped.table_name)::text = (tables.table_name)::text)))
+     JOIN ( SELECT cols.table_name,
+            create_insert((cols.table_name)::text, array_to_string(array_agg((cols.column_name)::text), ','::text), array_to_string(array_agg(param_names.sp_param), ','::text), 'id'::text, ((cols.table_name)::text || '_id'::text)) AS sql
+           FROM (_columns_not_default cols
+             JOIN _sp_table_param_names param_names ON (((param_names.column_name)::text = (cols.column_name)::text)))
+          GROUP BY cols.table_name) main_insert ON (((main_insert.table_name)::text = (tables.table_name)::text)))
+     JOIN ( SELECT table_inserts.table_name,
+            array_to_string(array_agg(table_inserts.sql), '; '::text) AS sql
+           FROM ( SELECT table_references.table_name,
+                    create_insert(table_references."references", columns.column_names, columns.column_names) AS sql
+                   FROM ((_tables_references table_references
+                     JOIN ( SELECT _columns_not_default.table_name,
+                            array_to_string(array_agg((_columns_not_default.column_name)::text), ','::text) AS column_names
+                           FROM _columns_not_default
+                          GROUP BY _columns_not_default.table_name) columns ON ((table_references."references" = (columns.table_name)::text)))
+                     JOIN ( SELECT param_names.table_name,
+                            array_to_string(array_agg(param_names.sp_param), ','::text) AS column_values
+                           FROM _sp_table_param_names param_names
+                          GROUP BY param_names.table_name) inputs ON ((table_references."references" = (inputs.table_name)::text)))) table_inserts
+          GROUP BY table_inserts.table_name) table_join_inserts_grouped ON (((table_join_inserts_grouped.table_name)::text = (tables.table_name)::text)));
+
+
+ALTER TABLE _sp_table_w_join_inserts OWNER TO denevell;
+
 SET default_tablespace = '';
 
 SET default_with_oids = false;
@@ -1242,60 +1313,6 @@ CREATE TABLE tags (
 ALTER TABLE tags OWNER TO denevell;
 
 --
--- Name: tmp; Type: VIEW; Schema: public; Owner: denevell
---
-
-CREATE VIEW tmp AS
- SELECT tables.table_name,
-    sp_params.sql AS params,
-    declared.sql AS declared,
-    table_inserts_grouped.sql AS inserts,
-    table_join_inserts_grouped.sql AS joins
-   FROM ((((_tables_not_join tables
-     JOIN ( SELECT table_references.table_name,
-            create_join_sp_params(array_agg(param_names.sp_param), array_agg((param_names.data_type)::text)) AS sql
-           FROM ((_tables_intransitive_references table_references
-             JOIN _columns_not_default columns ON ((table_references.intransitive_references = (columns.table_name)::text)))
-             JOIN _sp_table_param_names param_names ON ((((param_names.table_name)::text = table_references.intransitive_references) AND ((param_names.column_name)::text = (columns.column_name)::text))))
-          GROUP BY table_references.table_name) sp_params ON (((sp_params.table_name)::text = (tables.table_name)::text)))
-     JOIN ( SELECT table_references.table_name,
-            create_declareds(array_agg((table_references.intransitive_references || '_id'::text)), array_agg((columns.data_type)::text)) AS sql
-           FROM (_tables_intransitive_references table_references
-             JOIN _columns_primary_key columns ON ((table_references.intransitive_references = (columns.table_name)::text)))
-          GROUP BY table_references.table_name) declared ON (((declared.table_name)::text = (tables.table_name)::text)))
-     JOIN ( SELECT table_inserts.table_name,
-            array_to_string(array_agg(table_inserts.sql), '; '::text) AS sql
-           FROM ( SELECT table_references.table_name,
-                    ((((((((('insert into '::text || table_references.intransitive_references) || ' ('::text) || columns.column_names) || ') values('::text) || inputs.column_values) || ') returning id into '::text) || table_references.intransitive_references) || '_'::text) || 'id'::text) AS sql
-                   FROM ((_tables_intransitive_references table_references
-                     JOIN ( SELECT _columns_not_default.table_name,
-                            array_to_string(array_agg((_columns_not_default.column_name)::text), ','::text) AS column_names
-                           FROM _columns_not_default
-                          GROUP BY _columns_not_default.table_name) columns ON ((table_references.intransitive_references = (columns.table_name)::text)))
-                     JOIN ( SELECT param_names.table_name,
-                            array_to_string(array_agg(param_names.sp_param), ','::text) AS column_values
-                           FROM _sp_table_param_names param_names
-                          GROUP BY param_names.table_name) inputs ON ((table_references.intransitive_references = (inputs.table_name)::text)))) table_inserts
-          GROUP BY table_inserts.table_name) table_inserts_grouped ON (((table_inserts_grouped.table_name)::text = (tables.table_name)::text)))
-     JOIN ( SELECT table_inserts.table_name,
-            array_to_string(array_agg(table_inserts.sql), '; '::text) AS sql
-           FROM ( SELECT table_references.table_name,
-                    (((((('insert into '::text || table_references."references") || ' ('::text) || columns.column_names) || ') values('::text) || columns.column_names) || ')'::text) AS sql
-                   FROM ((_tables_references table_references
-                     JOIN ( SELECT _columns_not_default.table_name,
-                            array_to_string(array_agg((_columns_not_default.column_name)::text), ','::text) AS column_names
-                           FROM _columns_not_default
-                          GROUP BY _columns_not_default.table_name) columns ON ((table_references."references" = (columns.table_name)::text)))
-                     JOIN ( SELECT param_names.table_name,
-                            array_to_string(array_agg(param_names.sp_param), ','::text) AS column_values
-                           FROM _sp_table_param_names param_names
-                          GROUP BY param_names.table_name) inputs ON ((table_references."references" = (inputs.table_name)::text)))) table_inserts
-          GROUP BY table_inserts.table_name) table_join_inserts_grouped ON (((table_join_inserts_grouped.table_name)::text = (tables.table_name)::text)));
-
-
-ALTER TABLE tmp OWNER TO denevell;
-
---
 -- Name: tmp_multicolumn_id_seq; Type: SEQUENCE; Schema: public; Owner: denevell
 --
 
@@ -1327,7 +1344,7 @@ ALTER TABLE tmp_multicolumn OWNER TO denevell;
 --
 
 CREATE TABLE tmp_multicolumn_tags (
-    tmp_multicolumn_tags_id integer,
+    tmp_multicolumn_id integer,
     koans_id integer
 );
 
@@ -1440,7 +1457,7 @@ ALTER TABLE ONLY tmp_multicolumn_tags
 --
 
 ALTER TABLE ONLY tmp_multicolumn_tags
-    ADD CONSTRAINT tmp_multicolumn_tags_multi_id_fkey FOREIGN KEY (tmp_multicolumn_tags_id) REFERENCES tmp_multicolumn(id);
+    ADD CONSTRAINT tmp_multicolumn_tags_multi_id_fkey FOREIGN KEY (tmp_multicolumn_id) REFERENCES tmp_multicolumn(id);
 
 
 --
