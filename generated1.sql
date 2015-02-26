@@ -46,12 +46,34 @@ CREATE FUNCTION insert_categories_tags(category_id integer, tag_id integer) RETU
 ALTER FUNCTION autogen.insert_categories_tags(category_id integer, tag_id integer) OWNER TO denevell;
 
 --
+-- Name: insert_into_join_table_categories_tags(text, text); Type: FUNCTION; Schema: autogen; Owner: denevell
+--
+
+CREATE FUNCTION insert_into_join_table_categories_tags(category_id_tag text, tag_id_tag text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$ declare category_id integer; declare tag_id integer;  begin insert into tags (tag) values(category_id_tag) returning id into category_id; insert into tags (tag) values(tag_id_tag) returning id into tag_id; insert into categories_tags (category_id,tag_id) values(category_id,tag_id); end; $$;
+
+
+ALTER FUNCTION autogen.insert_into_join_table_categories_tags(category_id_tag text, tag_id_tag text) OWNER TO denevell;
+
+--
+-- Name: insert_into_join_table_koans_tags(text, text); Type: FUNCTION; Schema: autogen; Owner: denevell
+--
+
+CREATE FUNCTION insert_into_join_table_koans_tags(koans_id_message text, tags_id_tag text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$ declare koans_id integer; declare tags_id integer;  begin insert into koans (message) values(koans_id_message) returning id into koans_id; insert into tags (tag) values(tags_id_tag) returning id into tags_id; insert into koans_tags (koans_id,tags_id) values(koans_id,tags_id); end; $$;
+
+
+ALTER FUNCTION autogen.insert_into_join_table_koans_tags(koans_id_message text, tags_id_tag text) OWNER TO denevell;
+
+--
 -- Name: insert_into_join_table_with_unique_catch_categories_tags(text, text); Type: FUNCTION; Schema: autogen; Owner: denevell
 --
 
 CREATE FUNCTION insert_into_join_table_with_unique_catch_categories_tags(category_id_tag text, tag_id_tag text) RETURNS void
     LANGUAGE plpgsql
-    AS $$ declare category_id integer; declare tag_id integer; begin begin insert into tags (tag) values(category_id_tag) returning id into category_id; exception when unique_violation then select id into category_id from tags where tag = category_id_tag; end; begin insert into tags (tag) values(tag_id_tag) returning id into tag_id; exception when unique_violation then select id into tag_id from tags where tag = tag_id_tag; end; insert into categories_tags (category_id,tag_id) values(category_id,tag_id); end; $$;
+    AS $$ declare category_id integer; declare tag_id integer;  begin begin insert into tags (tag) values(category_id_tag) returning id into category_id; exception when unique_violation then select id into category_id from tags where tag = category_id_tag; end; begin insert into tags (tag) values(tag_id_tag) returning id into tag_id; exception when unique_violation then select id into tag_id from tags where tag = tag_id_tag; end; insert into categories_tags (category_id,tag_id) values(category_id,tag_id); end; $$;
 
 
 ALTER FUNCTION autogen.insert_into_join_table_with_unique_catch_categories_tags(category_id_tag text, tag_id_tag text) OWNER TO denevell;
@@ -60,23 +82,12 @@ ALTER FUNCTION autogen.insert_into_join_table_with_unique_catch_categories_tags(
 -- Name: insert_into_join_table_with_unique_catch_koans_tags(text, text); Type: FUNCTION; Schema: autogen; Owner: denevell
 --
 
-CREATE FUNCTION insert_into_join_table_with_unique_catch_koans_tags(koan_id_message text, tag_id_tag text) RETURNS void
+CREATE FUNCTION insert_into_join_table_with_unique_catch_koans_tags(koans_id_message text, tags_id_tag text) RETURNS void
     LANGUAGE plpgsql
-    AS $$ declare koan_id integer; declare tag_id integer;  begin insert into koans (message) values(koan_id_message) returning id into koan_id; begin insert into tags (tag) values(tag_id_tag) returning id into tag_id; exception when unique_violation then select id into tag_id from tags where tag = tag_id_tag; end; insert into koans_tags (koan_id,tag_id) values(koan_id,tag_id); end; $$;
+    AS $$ declare koans_id integer; declare tags_id integer;  begin insert into koans (message) values(koans_id_message) returning id into koans_id; begin insert into tags (tag) values(tags_id_tag) returning id into tags_id; exception when unique_violation then select id into tags_id from tags where tag = tags_id_tag; end; insert into koans_tags (koans_id,tags_id) values(koans_id,tags_id); end; $$;
 
 
-ALTER FUNCTION autogen.insert_into_join_table_with_unique_catch_koans_tags(koan_id_message text, tag_id_tag text) OWNER TO denevell;
-
---
--- Name: insert_into_join_table_with_unique_catch_tmp_multicolumn_tags(text, text, text); Type: FUNCTION; Schema: autogen; Owner: denevell
---
-
-CREATE FUNCTION insert_into_join_table_with_unique_catch_tmp_multicolumn_tags(koan_id_message text, multi_id_one text, multi_id_two text) RETURNS void
-    LANGUAGE plpgsql
-    AS $$ declare koan_id integer; declare multi_id integer; begin insert into koans (message) values(koan_id_message) returning id into koan_id; insert into tmp_multicolumn (one,two) values(multi_id_one,multi_id_two) returning id into multi_id; insert into tmp_multicolumn_tags (koan_id,multi_id) values(koan_id,multi_id); end; $$;
-
-
-ALTER FUNCTION autogen.insert_into_join_table_with_unique_catch_tmp_multicolumn_tags(koan_id_message text, multi_id_one text, multi_id_two text) OWNER TO denevell;
+ALTER FUNCTION autogen.insert_into_join_table_with_unique_catch_koans_tags(koans_id_message text, tags_id_tag text) OWNER TO denevell;
 
 --
 -- Name: insert_into_partial1_join_table_categories_tags(integer, text); Type: FUNCTION; Schema: autogen; Owner: denevell
@@ -93,23 +104,12 @@ ALTER FUNCTION autogen.insert_into_partial1_join_table_categories_tags(category_
 -- Name: insert_into_partial1_join_table_koans_tags(integer, text); Type: FUNCTION; Schema: autogen; Owner: denevell
 --
 
-CREATE FUNCTION insert_into_partial1_join_table_koans_tags(koan_id integer, tag_id_tag text) RETURNS void
+CREATE FUNCTION insert_into_partial1_join_table_koans_tags(koans_id integer, tags_id_tag text) RETURNS void
     LANGUAGE plpgsql
-    AS $$ declare tag_id integer;  begin insert into tags (tag) values(tag_id_tag) returning id into tag_id; insert into koans_tags (koan_id,tag_id) values(koan_id,tag_id); end; $$;
+    AS $$ declare tags_id integer;  begin insert into tags (tag) values(tags_id_tag) returning id into tags_id; insert into koans_tags (koans_id,tags_id) values(koans_id,tags_id); end; $$;
 
 
-ALTER FUNCTION autogen.insert_into_partial1_join_table_koans_tags(koan_id integer, tag_id_tag text) OWNER TO denevell;
-
---
--- Name: insert_into_partial1_join_table_tmp_multicolumn_tags(integer, text); Type: FUNCTION; Schema: autogen; Owner: denevell
---
-
-CREATE FUNCTION insert_into_partial1_join_table_tmp_multicolumn_tags(koan_id integer, multi_id_one text) RETURNS void
-    LANGUAGE plpgsql
-    AS $$ declare multi_id integer;  begin insert into tmp_multicolumn (one,two) values(multi_id_one,multi_id_two) returning id into multi_id; insert into tmp_multicolumn_tags (koan_id,multi_id) values(koan_id,multi_id); end; $$;
-
-
-ALTER FUNCTION autogen.insert_into_partial1_join_table_tmp_multicolumn_tags(koan_id integer, multi_id_one text) OWNER TO denevell;
+ALTER FUNCTION autogen.insert_into_partial1_join_table_koans_tags(koans_id integer, tags_id_tag text) OWNER TO denevell;
 
 --
 -- Name: insert_into_partial2_join_table_categories_tags(integer, text); Type: FUNCTION; Schema: autogen; Owner: denevell
@@ -126,23 +126,12 @@ ALTER FUNCTION autogen.insert_into_partial2_join_table_categories_tags(tag_id in
 -- Name: insert_into_partial2_join_table_koans_tags(integer, text); Type: FUNCTION; Schema: autogen; Owner: denevell
 --
 
-CREATE FUNCTION insert_into_partial2_join_table_koans_tags(tag_id integer, koan_id_message text) RETURNS void
+CREATE FUNCTION insert_into_partial2_join_table_koans_tags(tags_id integer, koans_id_message text) RETURNS void
     LANGUAGE plpgsql
-    AS $$ declare koan_id integer;  begin insert into koans (message) values(koan_id_message) returning id into koan_id; insert into koans_tags (koan_id,tag_id) values(koan_id,tag_id); end; $$;
+    AS $$ declare koans_id integer;  begin insert into koans (message) values(koans_id_message) returning id into koans_id; insert into koans_tags (koans_id,tags_id) values(koans_id,tags_id); end; $$;
 
 
-ALTER FUNCTION autogen.insert_into_partial2_join_table_koans_tags(tag_id integer, koan_id_message text) OWNER TO denevell;
-
---
--- Name: insert_into_partial2_join_table_tmp_multicolumn_tags(integer, text); Type: FUNCTION; Schema: autogen; Owner: denevell
---
-
-CREATE FUNCTION insert_into_partial2_join_table_tmp_multicolumn_tags(multi_id integer, koan_id_message text) RETURNS void
-    LANGUAGE plpgsql
-    AS $$ declare koan_id integer;  begin insert into koans (message) values(koan_id_message) returning id into koan_id; insert into tmp_multicolumn_tags (koan_id,multi_id) values(koan_id,multi_id); end; $$;
-
-
-ALTER FUNCTION autogen.insert_into_partial2_join_table_tmp_multicolumn_tags(multi_id integer, koan_id_message text) OWNER TO denevell;
+ALTER FUNCTION autogen.insert_into_partial2_join_table_koans_tags(tags_id integer, koans_id_message text) OWNER TO denevell;
 
 --
 -- Name: insert_koans(text); Type: FUNCTION; Schema: autogen; Owner: denevell
@@ -170,12 +159,12 @@ ALTER FUNCTION autogen.insert_koans(id integer, message text) OWNER TO denevell;
 -- Name: insert_koans_tags(integer, integer); Type: FUNCTION; Schema: autogen; Owner: denevell
 --
 
-CREATE FUNCTION insert_koans_tags(koan_id integer, tag_id integer) RETURNS void
+CREATE FUNCTION insert_koans_tags(koans_id integer, tags_id integer) RETURNS void
     LANGUAGE sql
-    AS $$ insert into koans_tags (koan_id,tag_id) values(koan_id,tag_id) ;$$;
+    AS $$ insert into koans_tags (koans_id,tags_id) values(koans_id,tags_id) ;$$;
 
 
-ALTER FUNCTION autogen.insert_koans_tags(koan_id integer, tag_id integer) OWNER TO denevell;
+ALTER FUNCTION autogen.insert_koans_tags(koans_id integer, tags_id integer) OWNER TO denevell;
 
 --
 -- Name: insert_tags(text); Type: FUNCTION; Schema: autogen; Owner: denevell
@@ -200,90 +189,73 @@ CREATE FUNCTION insert_tags(id integer, tag text) RETURNS integer
 ALTER FUNCTION autogen.insert_tags(id integer, tag text) OWNER TO denevell;
 
 --
--- Name: insert_tmp_multicolumn(text, text); Type: FUNCTION; Schema: autogen; Owner: denevell
+-- Name: insert_w_joins_koans(text, text); Type: FUNCTION; Schema: autogen; Owner: denevell
 --
 
-CREATE FUNCTION insert_tmp_multicolumn(one text, two text) RETURNS integer
-    LANGUAGE sql
-    AS $$ insert into tmp_multicolumn (one,two) values(one,two) returning id;$$;
+CREATE FUNCTION insert_w_joins_koans(koans_message text, tags_tag text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$ declare tags_id integer; declare koans_id integer; begin insert into koans (message) values(koans_message) returning id into koans_id;insert into tags (tag) values(tags_tag) returning id into tags_id;insert into koans_tags (koans_id,tags_id) values(koans_id,tags_id); end; $$;
 
 
-ALTER FUNCTION autogen.insert_tmp_multicolumn(one text, two text) OWNER TO denevell;
-
---
--- Name: insert_tmp_multicolumn(integer, text, text); Type: FUNCTION; Schema: autogen; Owner: denevell
---
-
-CREATE FUNCTION insert_tmp_multicolumn(id integer, one text, two text) RETURNS integer
-    LANGUAGE sql
-    AS $$ insert into tmp_multicolumn (id,one,two) values(id,one,two) returning id;$$;
-
-
-ALTER FUNCTION autogen.insert_tmp_multicolumn(id integer, one text, two text) OWNER TO denevell;
+ALTER FUNCTION autogen.insert_w_joins_koans(koans_message text, tags_tag text) OWNER TO denevell;
 
 --
--- Name: insert_tmp_multicolumn_tags(integer, integer); Type: FUNCTION; Schema: autogen; Owner: denevell
+-- Name: insert_w_joins_tags(text, text); Type: FUNCTION; Schema: autogen; Owner: denevell
 --
 
-CREATE FUNCTION insert_tmp_multicolumn_tags(koan_id integer, multi_id integer) RETURNS void
-    LANGUAGE sql
-    AS $$ insert into tmp_multicolumn_tags (koan_id,multi_id) values(koan_id,multi_id) ;$$;
+CREATE FUNCTION insert_w_joins_tags(tags_tag text, koans_message text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$ declare koans_id integer; declare tags_id integer; begin insert into tags (tag) values(tags_tag) returning id into tags_id;insert into koans (message) values(koans_message) returning id into koans_id;insert into categories_tags (category_id,tag_id) values(category_id,tag_id); insert into koans_tags (koans_id,tags_id) values(koans_id,tags_id); end; $$;
 
 
-ALTER FUNCTION autogen.insert_tmp_multicolumn_tags(koan_id integer, multi_id integer) OWNER TO denevell;
+ALTER FUNCTION autogen.insert_w_joins_tags(tags_tag text, koans_message text) OWNER TO denevell;
+
+--
+-- Name: insert_w_joins_uniques_koans(text, text); Type: FUNCTION; Schema: autogen; Owner: denevell
+--
+
+CREATE FUNCTION insert_w_joins_uniques_koans(koans_message text, tags_tag text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$ declare tags_id integer; declare koans_id integer; begin insert into koans (message) values(koans_message) returning id into koans_id;begin insert into tags (tag) values(tags_tag) returning id into tags_id; exception when unique_violation then select id into tags_id from tags where tag = tags_tag; end;insert into koans_tags (koans_id,tags_id) values(koans_id,tags_id); end; $$;
+
+
+ALTER FUNCTION autogen.insert_w_joins_uniques_koans(koans_message text, tags_tag text) OWNER TO denevell;
+
+--
+-- Name: insert_w_joins_uniques_tags(text, text); Type: FUNCTION; Schema: autogen; Owner: denevell
+--
+
+CREATE FUNCTION insert_w_joins_uniques_tags(tags_tag text, koans_message text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$ declare koans_id integer; declare tags_id integer; begin insert into tags (tag) values(tags_tag) returning id into tags_id;begin insert into koans (message) values(koans_message) returning id into koans_id; exception when unique_violation then  end;insert into categories_tags (category_id,tag_id) values(category_id,tag_id); insert into koans_tags (koans_id,tags_id) values(koans_id,tags_id); end; $$;
+
+
+ALTER FUNCTION autogen.insert_w_joins_uniques_tags(tags_tag text, koans_message text) OWNER TO denevell;
 
 SET search_path = public, pg_catalog;
 
 --
--- Name: autogen_join_table_inserts(); Type: FUNCTION; Schema: public; Owner: denevell
+-- Name: autogen_inserts(); Type: FUNCTION; Schema: public; Owner: denevell
 --
 
-CREATE FUNCTION autogen_join_table_inserts() RETURNS void
+CREATE FUNCTION autogen_inserts() RETURNS void
     LANGUAGE plpgsql
     AS $$
 declare s text;
 declare r record;
 begin
+		drop schema autogen cascade;
+		create schema autogen;
+
                 for r in select * from in_join_table_sp_insert_functions loop
                                     raise notice '%', r."sql";
                                             execute r."sql";
-                                                end loop;
-end;
-$$;
+                                                 end loop;
 
-
-ALTER FUNCTION public.autogen_join_table_inserts() OWNER TO denevell;
-
---
--- Name: autogen_join_table_inserts_with_unique_catch(); Type: FUNCTION; Schema: public; Owner: denevell
---
-
-CREATE FUNCTION autogen_join_table_inserts_with_unique_catch() RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-declare s text;
-declare r record;
-begin
                 for r in select * from in_join_table_sp_insert_functions_with_unique_catch loop
                                     raise notice '%', r."sql";
                                             execute r."sql";
                                                 end loop;
-end;
-$$;
-
-
-ALTER FUNCTION public.autogen_join_table_inserts_with_unique_catch() OWNER TO denevell;
-
---
--- Name: autogen_join_table_partial_inserts(); Type: FUNCTION; Schema: public; Owner: denevell
---
-
-CREATE FUNCTION autogen_join_table_partial_inserts() RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-declare s text;
-declare r record;
-begin
                 for r in select * from in_join_table_sp_partial1_insert_function loop
                                     raise notice '%', r."sql";
                                             execute r."sql";
@@ -291,52 +263,34 @@ begin
                 for r in select * from in_join_table_sp_partial2_insert_function loop
                                     raise notice '%', r."sql";
                                             execute r."sql";
-                                                end loop;                                                
+                                                end loop; 
+                                                
+		for r in select * from _sp_simple_inserts loop
+		    raise notice '%', r."sql";
+		    execute r."sql";
+		end loop;
+
+
+		for r in select * from _sp_simple_inserts_excluding_defaults loop
+		    raise notice '%', r."sql";
+		    execute r."sql";
+		end loop;
+
+		for r in select * from _sp_table_w_join_inserts loop
+		    raise notice '%', r."sql";
+		    execute r."sql";
+		end loop;        
+
+		for r in select * from _sp_table_w_join_uniques_inserts loop
+		    raise notice '%', r."sql";
+		    execute r."sql";
+		end loop;   
+                                                
 end;
 $$;
 
 
-ALTER FUNCTION public.autogen_join_table_partial_inserts() OWNER TO denevell;
-
---
--- Name: autogen_simple_inserts(); Type: FUNCTION; Schema: public; Owner: denevell
---
-
-CREATE FUNCTION autogen_simple_inserts() RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-declare s text;
-declare r record;
-begin
-        for r in select * from _sp_simple_inserts loop
-            raise notice '%', r."sql";
-            execute r."sql";
-        end loop;
-end;
-$$;
-
-
-ALTER FUNCTION public.autogen_simple_inserts() OWNER TO denevell;
-
---
--- Name: autogen_simple_inserts_excluding_defaults(); Type: FUNCTION; Schema: public; Owner: denevell
---
-
-CREATE FUNCTION autogen_simple_inserts_excluding_defaults() RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-declare s text;
-declare r record;
-begin
-        for r in select * from _sp_simple_inserts_excluding_defaults loop
-            raise notice '%', r."sql";
-            execute r."sql";
-        end loop;
-end;
-$$;
-
-
-ALTER FUNCTION public.autogen_simple_inserts_excluding_defaults() OWNER TO denevell;
+ALTER FUNCTION public.autogen_inserts() OWNER TO denevell;
 
 --
 -- Name: create_declared(text, text); Type: FUNCTION; Schema: public; Owner: denevell
@@ -366,6 +320,8 @@ CREATE FUNCTION create_declareds(names text[], types text[]) RETURNS text
     declare str text;        
     begin
 	str = '';
+	
+	if names is null or array_length(names, 1) is null then return ''; end if;
 	
 	for i in 1..array_length(names, 1) loop begin
 		str = str || 'declare ' || names[i] || ' ' || types[i] || '; ';
@@ -694,28 +650,6 @@ $$;
 ALTER FUNCTION public.in_koans_tags_insert(_koanid integer, _tagids integer[]) OWNER TO denevell;
 
 --
--- Name: insert_w_joins_koans(text, text, text, text); Type: FUNCTION; Schema: public; Owner: denevell
---
-
-CREATE FUNCTION insert_w_joins_koans(koans_message text, tags_tag text, tmp_multicolumn_two text, tmp_multicolumn_one text) RETURNS void
-    LANGUAGE plpgsql
-    AS $$ declare tags_id integer; declare tmp_multicolumn_id integer; declare koans_id integer; begin insert into koans (message) values(koans_message) returning id into koans_id;insert into tags (tag) values(tags_tag) returning id into tags_id; insert into tmp_multicolumn (one,two) values(tmp_multicolumn_one,tmp_multicolumn_two) returning id into tmp_multicolumn_id;insert into koans_tags (koans_id,tags_id) values(koans_id,tags_id); insert into tmp_multicolumn_tags (koans_id,tmp_multicolumn_id) values(koans_id,tmp_multicolumn_id); end; $$;
-
-
-ALTER FUNCTION public.insert_w_joins_koans(koans_message text, tags_tag text, tmp_multicolumn_two text, tmp_multicolumn_one text) OWNER TO denevell;
-
---
--- Name: insert_w_joins_uniques_koans(text, text, text, text); Type: FUNCTION; Schema: public; Owner: denevell
---
-
-CREATE FUNCTION insert_w_joins_uniques_koans(koans_message text, tags_tag text, tmp_multicolumn_two text, tmp_multicolumn_one text) RETURNS void
-    LANGUAGE plpgsql
-    AS $$ declare tags_id integer; declare tmp_multicolumn_id integer; declare koans_id integer; begin insert into koans (message) values(koans_message) returning id into koans_id;insert into tags (tag) values(tags_tag) returning id into tags_id; insert into tmp_multicolumn (one,two) values(tmp_multicolumn_one,tmp_multicolumn_two) returning id into tmp_multicolumn_id;begin insert into koans_tags (koans_id,tags_id) values(koans_id,tags_id); exception when unique_violation then  end; begin insert into tmp_multicolumn_tags (koans_id,tmp_multicolumn_id) values(koans_id,tmp_multicolumn_id); exception when unique_violation then  end; end; $$;
-
-
-ALTER FUNCTION public.insert_w_joins_uniques_koans(koans_message text, tags_tag text, tmp_multicolumn_two text, tmp_multicolumn_one text) OWNER TO denevell;
-
---
 -- Name: array_accum(anyarray); Type: AGGREGATE; Schema: public; Owner: denevell
 --
 
@@ -1029,7 +963,7 @@ ALTER TABLE _tables_not_join OWNER TO denevell;
 --
 
 CREATE VIEW _sp_table_w_join_inserts AS
- SELECT create_sp(('insert_w_joins_'::text || (tables.table_name)::text), (main_sp_params.params || sp_params.sql), 'void'::text, 'plpgsql'::text, declared.sql, (((((main_insert.sql || ';'::text) || table_inserts_grouped.sql) || ';'::text) || table_join_inserts_grouped.sql) || ';'::text)) AS create_sp
+ SELECT create_sp(('autogen.insert_w_joins_'::text || (tables.table_name)::text), (main_sp_params.params || sp_params.sql), 'void'::text, 'plpgsql'::text, declared.sql, (((((main_insert.sql || ';'::text) || table_inserts_grouped.sql) || ';'::text) || table_join_inserts_grouped.sql) || ';'::text)) AS sql
    FROM ((((((_tables_not_join tables
      JOIN ( SELECT table_references.table_name,
             create_join_sp_params(array_agg(param_names.sp_param), array_agg((param_names.data_type)::text)) AS sql
@@ -1089,7 +1023,7 @@ ALTER TABLE _sp_table_w_join_inserts OWNER TO denevell;
 --
 
 CREATE VIEW _sp_table_w_join_uniques_inserts AS
- SELECT create_sp(('insert_w_joins_uniques_'::text || (tables.table_name)::text), (main_sp_params.params || sp_params.sql), 'void'::text, 'plpgsql'::text, declared.sql, ((((main_insert.sql || ';'::text) || table_inserts_grouped.sql) || ';'::text) || table_join_inserts_grouped.sql)) AS create_sp
+ SELECT create_sp(('autogen.insert_w_joins_uniques_'::text || (tables.table_name)::text), (main_sp_params.params || sp_params.sql), 'void'::text, 'plpgsql'::text, declared.sql, (((main_insert.sql || ';'::text) || table_inserts_grouped.sql) || table_join_inserts_grouped.sql)) AS sql
    FROM ((((((_tables_not_join tables
      JOIN ( SELECT table_references.table_name,
             create_join_sp_params(array_agg(param_names.sp_param), array_agg((param_names.data_type)::text)) AS sql
@@ -1108,9 +1042,9 @@ CREATE VIEW _sp_table_w_join_uniques_inserts AS
              JOIN _columns_primary_key columns ON ((table_references.intransitive_references = (columns.table_name)::text)))
           GROUP BY table_references.table_name) declared ON (((declared.table_name)::text = (tables.table_name)::text)))
      JOIN ( SELECT table_inserts.table_name,
-            array_to_string(array_agg(table_inserts.sql), '; '::text) AS sql
+            array_to_string(array_agg(table_inserts.sql), ' '::text) AS sql
            FROM ( SELECT table_references.table_name,
-                    create_insert(table_references.intransitive_references, columns.column_names, inputs.column_values, 'id'::text, ((table_references.intransitive_references || '_'::text) || 'id'::text)) AS sql
+                    (((('begin '::text || create_insert(table_references.intransitive_references, columns.column_names, inputs.column_values, 'id'::text, ((table_references.intransitive_references || '_'::text) || 'id'::text))) || '; exception when unique_violation then '::text) || create_select_into_on_unique_column(table_references.intransitive_references, (table_references.intransitive_references || '_id'::text))) || ' end;'::text) AS sql
                    FROM ((_tables_intransitive_references table_references
                      JOIN ( SELECT _columns_not_default.table_name,
                             array_to_string(array_agg((_columns_not_default.column_name)::text), ','::text) AS column_names
@@ -1127,9 +1061,9 @@ CREATE VIEW _sp_table_w_join_uniques_inserts AS
              JOIN _sp_table_param_names param_names ON (((param_names.column_name)::text = (cols.column_name)::text)))
           GROUP BY cols.table_name) main_insert ON (((main_insert.table_name)::text = (tables.table_name)::text)))
      JOIN ( SELECT table_inserts.table_name,
-            array_to_string(array_agg(table_inserts.sql), ' '::text) AS sql
+            (array_to_string(array_agg(table_inserts.sql), '; '::text) || ';'::text) AS sql
            FROM ( SELECT table_references.table_name,
-                    (((('begin '::text || create_insert(table_references."references", columns.column_names, columns.column_names)) || '; exception when unique_violation then '::text) || create_select_into_on_unique_column(table_references."references", (table_references."references" || '_id'::text))) || ' end;'::text) AS sql
+                    create_insert(table_references."references", columns.column_names, columns.column_names) AS sql
                    FROM ((_tables_references table_references
                      JOIN ( SELECT _columns_not_default.table_name,
                             array_to_string(array_agg((_columns_not_default.column_name)::text), ','::text) AS column_names
@@ -1388,17 +1322,6 @@ CREATE TABLE schema_version (
 ALTER TABLE schema_version OWNER TO denevell;
 
 --
--- Name: str; Type: TABLE; Schema: public; Owner: denevell; Tablespace: 
---
-
-CREATE TABLE str (
-    "?column?" text
-);
-
-
-ALTER TABLE str OWNER TO denevell;
-
---
 -- Name: tags_id_seq; Type: SEQUENCE; Schema: public; Owner: denevell
 --
 
@@ -1439,31 +1362,6 @@ CREATE SEQUENCE tmp_multicolumn_id_seq
 ALTER TABLE tmp_multicolumn_id_seq OWNER TO denevell;
 
 --
--- Name: tmp_multicolumn; Type: TABLE; Schema: public; Owner: denevell; Tablespace: 
---
-
-CREATE TABLE tmp_multicolumn (
-    id integer DEFAULT nextval('tmp_multicolumn_id_seq'::regclass) NOT NULL,
-    one text,
-    two text
-);
-
-
-ALTER TABLE tmp_multicolumn OWNER TO denevell;
-
---
--- Name: tmp_multicolumn_tags; Type: TABLE; Schema: public; Owner: denevell; Tablespace: 
---
-
-CREATE TABLE tmp_multicolumn_tags (
-    tmp_multicolumn_id integer,
-    koans_id integer
-);
-
-
-ALTER TABLE tmp_multicolumn_tags OWNER TO denevell;
-
---
 -- Name: koans_pkey; Type: CONSTRAINT; Schema: public; Owner: denevell; Tablespace: 
 --
 
@@ -1485,14 +1383,6 @@ ALTER TABLE ONLY schema_version
 
 ALTER TABLE ONLY tags
     ADD CONSTRAINT tags_pkey PRIMARY KEY (id);
-
-
---
--- Name: tmp_multicolumn_pkey; Type: CONSTRAINT; Schema: public; Owner: denevell; Tablespace: 
---
-
-ALTER TABLE ONLY tmp_multicolumn
-    ADD CONSTRAINT tmp_multicolumn_pkey PRIMARY KEY (id);
 
 
 --
@@ -1554,22 +1444,6 @@ ALTER TABLE ONLY koans_tags
 
 ALTER TABLE ONLY koans_tags
     ADD CONSTRAINT koans_tags_tag_id_fkey FOREIGN KEY (tags_id) REFERENCES tags(id);
-
-
---
--- Name: tmp_multicolumn_tags_koan_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: denevell
---
-
-ALTER TABLE ONLY tmp_multicolumn_tags
-    ADD CONSTRAINT tmp_multicolumn_tags_koan_id_fkey FOREIGN KEY (koans_id) REFERENCES koans(id);
-
-
---
--- Name: tmp_multicolumn_tags_multi_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: denevell
---
-
-ALTER TABLE ONLY tmp_multicolumn_tags
-    ADD CONSTRAINT tmp_multicolumn_tags_multi_id_fkey FOREIGN KEY (tmp_multicolumn_id) REFERENCES tmp_multicolumn(id);
 
 
 --
